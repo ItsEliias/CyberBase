@@ -1,0 +1,94 @@
+SIEM - Security Information and Event Management
+-a software solution that provides a central location to collect log data from multiple sources within your environment
+-three critical capabilites:
+1. Treat detection
+2. Investigation
+3. Time to respond
+-other features: basic security monitoring, advanced threat detection, forensics and incident response, log collection, normalization, notification and alerts, security incident detection, threat response workflow
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Splunk enterprise
+-Bar
+1. Messages: system-level messages
+2. Settings: configure Splunk instance
+3. Activity: review progress of jobs
+4. Help: misc info and tutorials
+5. Find: search
+
+Documentation: https://docs.splunk.com/Documentation/Splunk/8.1.2/SearchTutorial/NavigatingSplunk
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Splunk Apps
+1. Search and Reporting
+-Search App: enter splunk queries
+
+more apps: Splunk Apps
+-can also upload apps
+
+Docu: https://docs.splunk.com/Documentation/Splunk/8.1.2/Admin/Managingappobjects
+
+Folder name: TA-microsoft-sysmon
+version: 10.6.2
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Adding Data
+-can ingest any data
+-data is processed and transformed into a series of individual events
+-sources can be event logs, website logs, firewall logs, etc
+
+Docu: https://docs.splunk.com/Documentation/Splunk/8.1.2/Data/Getstartedwithgettingdatain#Use_apps_to_get_data_in
+
+Add Data > upload > tutorial.zip
+-109,864
+
+--------------------------------------------------------------------------------------------------
+
+Splunk Queries
+
+search: source="tutorialdata.zip:*" "failed password"
+sourcetype: -www1/secure
+
+Patterns > look for last username
+-myuan
+
+search: source="tutorialdata.zip:*" "failed password" "myuan"
+-16
+
+-----------------------------------------------------------------------------------------------------------------------------------
+
+Sigma Rules
+-provide structured form to describe detection methods and allow the to be shareable
+-written in YAML (human friendly data serialization standard for all programming languages)
+-sigma repo has signatures in the rules folder. Sigmac - sigma converter - located in the tools folder can generate a specific SIEM rule
+ex:
+./sigmac -t splunk -c tools/config/generic/sysmon.yml ./rules/windows/process_creation/win_susp_whoami.yml
+-online version: uncoder.io
+-uncoder.io > select 'sigma:APT29' > convert to Splunk >
+source="WinEventLog:*" AND CommandLine="*-noni -ep bypass $*"
+
+Use the Github Sigma repo. What is the Splunk query for 'CACTUSTORCH Remote Thread Creation'?
+-sigma-public/rules/windows/sysmon/sysmon_cactustorch.yml
+source="WinEventLog:*" AND ((SourceImage="*\\System32\\cscript.exe" OR SourceImage="*\\System32\\wscript.exe" OR SourceImage="*\\System32\\mshta.exe" OR SourceImage="*\\winword.exe" OR SourceImage="*\\excel.exe") AND TargetImage="*\\SysWOW64\\*" AND NOT StartModule="*")
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+Dashboards and visualizations
+docu: https://docs.splunk.com/Documentation/Splunk/8.1.2/Viz/Visualizationreference
+
+What is the highest EventID?
+11
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+Alerts
+-enables monitoring and responding to specific events
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+More
+-Regex: https://docs.splunk.com/Documentation/Splunk/8.1.2/Knowledge/AboutSplunkregularexpressions
+-Splunk fundamentals training + certification: https://www.splunk.com/en_us/training/courses/
+

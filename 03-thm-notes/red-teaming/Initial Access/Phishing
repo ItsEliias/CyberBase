@@ -1,0 +1,100 @@
+Social Engineering: psychological manipulation of people into performing or divulging information by exploiting weaknesses in human nature.
+Weaknesses can be curiosity, jealousy, greed and kindness.
+-Phishing: source of social engineering delivered through email to trick someone into either revealing personal info or executing malicious code
+-emails appear from a trusted source
+-Spear-phishing: target a certain individual, business or organization
+
+-Smishing: phishing through SMS messages
+-Vishing: phishing through phone calls
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Writing Convincing Phishing emails
+
+1. Sender's Address: OSINT to find brands or people victim interacts with
+-social media account for brands or friends they talk to
+-search google for vitim's name and location
+-victim's business website to find suppliers
+-linkedin to find coworkers
+
+2. Subject: get attention and acts quickly and impulsively. eg:
+-Your account has been compromised
+-Your package has been shipped
+-Payroll information (do not forward)
+-Your photos have been published
+
+3. Content: 
+-research standard email template of brand being spoofed (logo's, style etc)
+-links disguised using anchor text eg "Click Here" or "Change it to the correct looking link hiding the link behind business you are spoofing
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+
+Phishing Infrastructure
+
+-Domain name: mimic identitity 
+-SSL/TLS certificate: extra layer of authenticity
+-Email Server/Account: register SMTP email provider or setup email server
+-DNS Records: SPF, DKIM, DMARC improve deliverability
+-Web Server: setup webservers or purchase web hosting from a company 
+-Analytics: track of emails sent
+
+Useful software/automation
+
+GoPhish
+-open source
+-store SMTP server settings for sending emails
+-email templates
+-schedule send times
+-analytics to show how many emails have been sent, opened or clicked
+
+SET - (Social Engineering Toolkit)
+-ability to create spear-phishing attacks 
+-deploy fake versions of common websites to trick victims
+
+----------------------------------------------------------------------------------------------------------------------------------------------------
+
+Using GoPhish
+
+https://[IP]
+login - user: admin, password: tryhackme
+
+brian credentials
+username: brian
+password: p4$$w0rd!
+
+--------------------------------------------------------------------------------------------------------------------------
+
+Droppers
+-software that phishing victims tend to be tricked into downloading and running on their system
+-usually pass antivirus checks
+-once installed malware is unpacked or downloaded from a server and installed onto the victim's computer
+
+--------------------------------------------------------------------------------------------------------------------------
+
+Choosing a phishing domain
+
+Expired Domains: spam filters tend to not trust brand new domains
+TypoSquatting: misspelling, addtional period, numbers switched for letters, phrasing or additional word
+Top Level domain (.com, .net, .co.uk, .org etc) Alternatives: using a different TLD
+IDN Homograph Attack/script spoofing: eg. Cyrillic small letter 'a' (U+0430) is identical to standard latin small letter 'a' (U+0061)
+
+----------------------------------------------------------------------------------------------------------------------------
+
+Using MS OFfice in Phishing
+
+-embedded macros used to run computer commands that could cause malware to be installed into victims computer or connect back to attacker's network
+-eg. attacker spoofes email to send a psychologically tempting email designed for the victim
+
+-----------------------------------------------------------------------------------------------------------------
+
+Using Browser exploits
+-vulns against browser itself
+-out of date browsers: education, government and health care
+
+---------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+

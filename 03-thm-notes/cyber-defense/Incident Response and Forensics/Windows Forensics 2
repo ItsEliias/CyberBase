@@ -1,0 +1,164 @@
+-Identify Locations and artifacts to prove evidence of execution
+-File/folder usage or knowledge
+-External device usage
+-Basics of recovering deleted files
+
+--------------------------------------------------------------------------------------------------------------------
+
+The FAT file systems
+-storage device in computer system (hard disk or USB)
+-FAT (File Allocation Table)
+-default file system for Microsoft OS 
+-no longer default
+-indexes location of bits that are allocated to different files
+
+Clusters: basic storage unit of FAT file system
+Directory: information about file identification, name, starting cluster and filename length
+FAT: linked list of all clusters, contains status of cluster and pointer to the next cluster in the chain
+
+FAT12: 12-bit cluster addressing max of 4096 clusters (2^12)
+FAT16: 16-bit cluster addressing max of 65,536 clusters (2^16)
+FAT32: 32-bit cluster addressing max of 268,435,456 clusters (2^28) - windows limits formatting to only 32 GB - 28 addressible bits
+-max file supported by FAT32: 4GB
+
+exFAT file system: default for SD cards larger than 32GB
+-reduces overhead of FAT file system, lighter and more efficient
+
+-------------------------------------------------------------------------------------------------------------------------------
+
+NTFS file system
+-New Technology File System
+-adds security, reliability and recovery
+
+Journaling: NTFS keeps a log of changes to metadata in the volume, help system recovery from a crash or degragmentation
+-$LOGFILE
+
+Access Controls: gives access to defined owner of a file/directory and permissions for each user
+Volume Shadow Copy: restore previous file versions for recovery or system restore to recover data loss
+Alternate Data Streams: ADS - allow multiple streams of data stored in a single file
+
+Master File Table:
+-structured database that tracks the objects stored in a volume
+-$MFT: first record in volume, Volumen Boot Record (VBR)
+-$LOGFILE: logging
+-$UsnJrnl: update sequence number (USN) - info about file that were changed and reason for change
+
+MFT explorer
+-EZTools: CLI
+MFTECmd.exe - parses data from different files created by the NTFS file system like $MFT, $Boot, etc
+MFTECmd.exe -f <path-to-$MFT-file> --csv <path-to-save-results-in-csv>
+-open in ezviewer and find file size
+MFTECmd.exe -f <path-to-$BOOT-file> --csv <path-to-save-results-in-csv>
+-open in ezviewer and find cluster size
+
+-------------------------------------------------------------------------------------------------------------------------------------
+
+Recovering deleted Files
+-When a file is deleted from the file system, the file system deletes the entries that store the file's location on the disk
+-The location where the file existed is now available for writing or unallocated
+-The file contents on disk are still present as long as they are not overwritten
+
+Disk Image
+-file that contains a bit-by-bit copy of a disk drive
+-a bit by bit copy saves all the data in a disk image file including metadata, in a single file
+-original evidence is not contaminated
+-disk image file can be copied to another disk and analyzed without using specialized hardware
+
+Autopsy
+-Autopsy used to recover deleted files
+Autopsy > new case > enter directory and additional information, data type etc
+
+-usb.001
+
+
+There is another xlsx file that was deleted. What is the full name of that file?
+tryhackme.xlsx
+
+Name of the txt file that was deleted from the disk?
+tryhackme2.txt
+
+Recover the txt file from Question #2.
+THM-4n6-2-4
+
+----------------------------------------------------------------------------------------------------
+
+Windows Prefetch fiiles
+
+-When program is run, info is stored for future use
+-stored info is used for quick loading 
+C:\Windows\Prefetch
+.pf file
+-prefetch files contain the last run times of the app, number of times the app was run and files and device handles used by the file
+-use prefetch parser (PECmd.exe) - EZTools
+
+PECmd.exe
+PECmd.exe -f <path-to-Prefetch-files> --csv <path-to-save-csv> -file
+PECmd.exe -d <path-to-Prefetch-directory> --csv <path-to-save-csv> -directory
+
+Windows 10 Timeline
+-info about last executed programs
+C:\Users\<username>\AppData\Local\ConnectedDevicesPlatform\{randomfolder}\ActivitiesCache.db
+WxTCmd.exe -f <path to timeline> --csv <path to save csv>
+
+Windows Jump lists
+
+-help users go directly to their recently used files
+C:\Users\<username>\AppData\Roaming\Microsoft\Windows\Recent\AutomaticDestinations
+-use JLECmd.exe
+JLECmd.exe -f <path-to-Jumplist-file> --csv <path-to-save-csv>
+
+C:\users\thm-4n6\Desktop\triage\C\Windows
+
+1 & 2. PECmd.exe -f triage\C\Windows\GKAPE.EXE-E945EF56.pf --csv [path]
+open in EZ viewer
+times run: 2
+last run: 12/1/2021 13:04
+
+3. WxTCmd.exe -f <path> --csv <path to save csv>
+open in EZ viewer
+Notepad in focus for 00:00:41 on 11/30/2021
+
+4. JLECmd.exe -d <directory> --csv <path to save csv>
+open file in EZ viewer
+notepad.exe
+
+-----------------------------------------------------------------------------------------------
+
+Shortcut files
+-windows creates shortcut files for each file opened either locally or remotely
+-info contained in shortcut files: first and last opened times, path of opened file, etc
+C:\Users\<username>\AppData\Roaming\Microsoft\Windows\Recent\
+C:\Users\<username>\AppData\Roaming\Microsoft\Office\Recent\
+use: LECmd.exe
+LECmd.exe -f <path-to-shortcut-files> --csv <path-to-save-csv>
+
+IE/Edge history
+-includeds files opened in the system as well
+-whether those files were opened using browser or not
+C:\Users\<username>\AppData\Local\Microsoft\Windows\WebCache\WebCacheV*.dat
+
+Jump Lists
+-create a list of last opened files
+-used to identify both last executed programs and last opened files in a system
+C:\Users\<username>\AppData\Roaming\Microsoft\Windows\Recent\AutomaticDestinations
+
+Regripper last opened?
+12/1/2021 13:01
+
+first opened?
+12/1/2021 12:31
+
+------------------------------------------------------------------------------------------
+
+Setup API dev logs for usb devices
+-when any new device is attached to a system, info about setup of device is stored in Setupapi.dev.log
+C:\Windows\inf\setupapi.dev.log
+ 
+
+
+
+
+
+
+
+

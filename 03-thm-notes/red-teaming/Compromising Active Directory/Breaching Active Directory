@@ -1,0 +1,15 @@
+Most MS Windows use AD
+-dominant suite used to manage windows domain networks
+-used for identity and access management 
+
+Osint
+-open-source intelligence
+-HaveIBeenPwned and DeHashed - public data breach
+
+Phishing
+-entice users to provide credentials
+-open apps that install Remote Access Trojan (RAT) in background
+
+NTLM and NetNTLM
+-NTLM: suite of security protocols to authenticate uers' identities in AD
+-NetNTLM: exposed to the internet - challenge-response authentication

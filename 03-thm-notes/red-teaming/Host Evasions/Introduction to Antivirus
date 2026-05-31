@@ -1,0 +1,71 @@
+AV - Antivirus
+-host based security solution
+-extra layer of security that aims to detect and prevent the execution and spread of malicious files in a target OS
+-runs in real-time to monitor and check current and newly downloaded files
+-decides if files are malicious using different techniques
+
+-looks for malware with predefined malicious patterns or signatures
+-malware can: gain access to target and steal/encrypt/destroy files, inject other malicious software or takeover machine
+
+Endpoint Detection and Response (EDR): security solution that provides real-time protection based on behavioral analytics
+-checks file activities, memory, network connections, registry, processes, etc
+-modern AV has EDR functionality
+
+-first AV software - VirusScan used to remove a virus called "Brain" - John McAfee (PC antivirus vendor McAfee)
+
+----------------------------------------------------------------------------------------------------------------------
+
+Antivirus Engines
+-scanner: GUI or command prompt
+-Detection techniques: signature based(pre-defined), heuristic(behavioral), dynamic detection
+-Compressors and Archives: zip, TGZ, 7z, xar, rar etc
+-PE parsing unpackers: unpack most known packers (upx, armadillo, ASPack etc), DLLs, Iconfiles, font files anc core dumps
+-Emulators: monitor API calls, memory dumps, filesystem mods, log events, running processes, web requests in a controlled env
+
+---------------------------------------------------------------------------------------------------------------------------
+
+AV static detection
+-pattern matching techniques in detection such as checksums, bytecode/hex values, cypto hashes
+-check against signatures considered malicious
+-clamAV antivirus
+-check files EICAR: test file for AV software
+
+c:\Program Files\ClamAV\clamscan.exe c:\Users\thm\Desktop\Samples
+-after checking against db
+-detects backdoor 1 but doesn't detect backdoor 2
+
+-create signature db 
+1. generate MD5 signature for the file
+sigtool.exe --md5 backdoor2.exe
+2. Add the generated signature into db with extension ".hdb"
+sigtool.exe --md5 backdoor2.exe > thm.hdb
+3. rescan
+clamscan.exe thm.hdb backdoor2.exe
+-result: UNOFFICIAL FOUND
+
+MD5 of AV-Check.exe
+f4a974b0cf25dca7fbce8701b7ab3a88:6144:AV-Check.exe
+
+-yara: create rules to detect and classify malware
+-rules-based detection
+
+clamscan.exe -d Desktop\Files\thm-demo-1.yara Desktop\Samples
+
+find strings: strings AV-Check.exe | findstr THM
+THM{Y0uC4nC-5tr16s}
+
+--------------------------------------------------------------------------------------------------
+
+Other Detection Techniques
+-Dynamic: check files at runtime ( windows API monitoring or sandboxing)
+-Heuristic and Behavioral: 
+1. Static Heuristic: decompile and extract sourcce code and compare to other known virus source codes
+2. Dynamic Heuristic: analyze suspicious software in isolated and secured environments
+
+---------------------------------------------------------------------------------------
+
+AV Testing and Fingerprinting
+-AV vendors - firewall, encryption, anti-spam, EDR, vuln scanning, vpn etc
+-AV Testing
+-Virus Total: web based scanning platform for checking suspicious files
+-SharpEDRChecker: C#, public tool, check processes, metadata, dll, reg keys, services, directories and files

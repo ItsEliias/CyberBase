@@ -1,0 +1,126 @@
+  Subsystem and Hardware Interaction
+-Programs need to access or modify windows subsystems or hardware (restricted)
+-Win32 API library to interface between user-mode applications and the kernel
+User-mode: No direct hardware access, access to "owned" memory locations
+Kernel-mode: Direct hardware access, access entire physical memory
+
+---------------------------------------------------------------------------------
+
+Components of Windows API
+1. API: A top-level/general term or theory used to describe any call found in the win32 API structure.
+2. Header files or imports: Defines libraries to be imported at run-time, defined by header files or library imports. Uses pointers to obtain the function address.
+3. Core DLLs: A group of four DLLs that define call structures. (KERNEL32, USER32, and ADVAPI32). These DLLs define kernel and user services that are not contained in a single subsystem.
+4. Supplemental DLLs: Other DLLs defined as part of the Windows API. Controls separate subsystems of the Windows OS. ~36 other defined DLLs. (NTDLL, COM, FVEAPI, etc.)
+5. Call Structures: Defines the API call itself and parameters of the call.
+6. API Calls: The API call used within a program, with function addresses obtained from pointers.
+7. In/Out Parameters: The parameter values that are defined by the call structures. 
+
+header file imports and defines the user32 DLL: winuser.h
+parent header file contains all other required child and core header files: windows.h
+
+-----------------------------------------------------------------------------------
+
+OS Libraries
+
+ASLR: Address Space Layout Randomization
+-Windows Header File: windows.h : can call any win32 function
+-P/Invoke: access to structs, callbacks, functions in unmanaged libraries from managed code
+
+What overarching namespace provides P/Invoke to .NET? system
+What memory protection solution obscures the process of importing API calls? ASLR
+
+------------------------------------------------------------------------------------------
+
+API Call Structure
+-API calls are the second main component of the win32 library
+-extended by modifying the naming scheme and appending a representational character 
+A: Represents and 8-bit character set with ANSI encoding
+W: Represents a Unicode encoding
+Ex: Provides extended functionality or in/out parameters to the API call
+
+Memory allocation type of 0x00080000 in the VirtualAlloc API call: MEM_RESET
+
+------------------------------------------------------------------------------------------
+
+C API Implementations 
+
+-microsoft provides low-level programming languages such as C and C++ with pre-configured set of libraries
+eg. #include <windows.h>
+-create pop-up window
+HWND CreateWindowExA(..params..);
+HWND hwnd = CreateWindowEx(..values..);
+
+-----------------------------------------------------------------------------------------
+
+.NET and PowerShell API Implementations
+
+class Win32 {
+	[DllImport("kernel32")]
+	public static extern IntPtr GetComputerNameA(StringBuilder lpBuffer, ref uint lpnSize);
+}
+
+static void Main(string[] args) {
+	bool success;
+	StringBuilder name = new StringBuilder(260);
+	uint size = 260;
+	success = GetComputerNameA(name, ref size);
+	Console.WriteLine(name.ToString());
+}
+
+class: stores defined API calls and a definition to reference in future methods
+DllImport: import a specific DLL 
+intPtr: create a new pointer to the API call
+
+powershell
+-method instead of class and add aditional operators
+$MethodDefinition = @"
+    [DllImport("kernel32")]
+    public static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+    [DllImport("kernel32")]
+    public static extern IntPtr GetModuleHandle(string lpModuleName);
+    [DllImport("kernel32")]
+    public static extern bool VirtualProtect(IntPtr lpAddress, UIntPtr dwSize, uint flNewProtect, out uint lpflOldProtect);
+"@;
+-must create a new type for the pointer of each Win32 DLL using Add-Type function 
+$Kernel32 = Add-Type -MemberDefinition $MethodDefinition -Name 'Kernel32' -NameSpace 'Win32' -PassThru;
+-use the required API calls with 
+[Win32.Kernel32]::<Imported Call>()
+
+-Method used to import required DLL: DllImport
+-type of method used to reference the API call to obtain a struct: external
+
+--------------------------------------------------------------------------------------
+
+Commonly Abused API calls
+LoadLibraryA -> Maps a specified DLL  into the address space of the calling process
+GetUserNameA -> Retrieves the name of the user associated with the current thread
+GetComputerNameA -> Retrieves a NetBIOS or DNS  name of the local computer
+GetVersionExA -> Obtains information about the version of the operating system currently running
+GetModuleFileNameA -> Retrieves the fully qualified path for the file of the specified module and process
+GetStartupInfoA -> Retrieves contents of STARTUPINFO structure (window station, desktop, standard handles, and appearance of a process)
+GetModuleHandle -> Returns a module handle for the specified module if mapped into the calling process's address space
+GetProcAddress -> Returns the address of a specified exported DLL  function
+VirtualProtect -> Changes the protection on a region of memory in the virtual address space of the calling process
+
+-----------------------------------------------------------------------------------------
+
+Malware Case Study
+
+What Win32 API call is used to obtain a pseudo handle of our current process in the keylogger sample?
+-GetCurrentProcess()
+What Win32 API call is used to set a hook on our current process in the keylogger sample?
+-SetWindowsHookEx
+What Win32 API call is used to obtain a handle from the pseudo handle in the keylogger sample?
+-GetModuleHandle
+What Win32 API call is used to unset the hook on our current process in the keylogger sample?
+-UnhookWindowsHookEx
+What Win32 API call is used to allocate memory for the size of the shellcode in the shellcode launcher sample?
+-VirtualAlloc
+What native method is used to write shellcode to an allocated section of memory in the shellcode launcher sample?
+-Marshal.Copy
+What Win32 API call is used to create a new execution thread in the shellcode launcher sample?
+-CreateThread
+What Win32 API call is used to wait for the thread to exit in the shellcode launcher sample?
+-WaitForSingleObject
+
+

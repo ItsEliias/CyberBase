@@ -1,0 +1,118 @@
+Volatility - Free Memory forensics tool developed and maintained by Volatility labs
+-expandable via plugins 
+
+------------------------------------------------------------------------------------------------------
+
+Overview
+-Extraction of samples/digital artifacts from volatile memoray (RAM) samples
+-python2 and python3
+
+------------------------------------------------------------------------------------------------------
+
+Obtaining Memory Samples
+-Memory captured using following tools:
+FTK imager: https://accessdata.com/product-download/ftk-imager-version-4-2-0
+RedLine: https://www.fireeye.com/services/freeware/redline.html *requires registration
+DumpIt.exe
+Win32dd.exe / Win64dd.exe *psexec support
+
+-tools output a .raw file
+-memory can be pulled from offline (without encryption): %SystemDrive%/hiberfil.sys
+hiberfil.sys: Windows hibernation file = contains a compressed memory image from the previous boot
+-used to provide faster boot-up time
+
+-virtual machines:
+VMware - .vmem file
+Hyper-V - .bin file
+Parallels - .mem file
+VirtualBox - .sav file *only partial memory file
+
+--------------------------------------------------------------------------------------------------------------
+
+Examining Our Patient
+
+cd home/voluser
+unzip cridex_memdump.zip
+volatility -f cridex.vmem imageinfo
+-information
+
+volatility -f cridex.vmem --profile=WinXPSP2x86 pslist
+WinXPSP2x86
+
+smss.exe
+-PID: 368
+
+active network connections
+
+find processes via psxview
+volatility -f cridex.vmem --profile=WinXPSP2x86 psxview
+-csrss.exe
+
+volatility -f cridex.vmem --profile=WinXPSP2x86 ldrmodules
+-csrss.exe
+
+volatility -f cridex.vmem --profile=WinXPSP2x86 malfind -D /tmp
+-12
+
+volatility -f cridex.vmem --profile=WinXPSP2x86 --pid=584 dlldump -D /tmp
+-12
+
+--------------------------------------------------------------------------------------------------------------------------
+
+Virus Total - https://www.virustotal.com/gui/home/upload
+Hybrid Analysis - https://www.hybrid-analysis.com/
+
+------------------------------------------------------------------------------------------------------------------------------
+
+Extra Credit - "Memory Forensics with Vol(a|u)tility" - A great talk on learning the basics of Volatility and the GUI plugin VolUtility made by @chupath1ngee
+
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+NEW Volatility Room
+
+python3 vol.py -h
+
+identify image info and profiles
+python3 vol.py -f <file> windows.info
+
+List processes and connectinos
+python3 vol.py -f <file> windows.pslist
+
+-for rootkits that hide their processes
+python3 vol.py -f <file> windows.psscan
+
+-list all processes based on their parent process ID
+python3 vol.py -f <file> windows.pstree
+
+-list network connections present at time of extraction
+python3 vol.py -f <file> windows.netstat
+
+-list dlls associated with processes at time of extraction
+python3 vol.py -f <file> windows.dlllist
+
+-attempt to identify injected processes and their PIDs
+python3 vol.py -f <file> windows.malfind
+
+-compare memory file against YARA rules
+python3 vol.py -f <file> windows.yarascan
+
+-search for hooking SSDT - system service descriptor table
+python3 vol.py -f <file> windows.ssdt
+
+-search for malicious driver files
+python3 vol.py -f <file> windows.modules
+
+-scan for drivers present at time of extraction
+python3 vol.py -f <file> windows.driverscan
+
+other useful plugins: 
+modscan
+driverirp
+callbacks
+idt
+apihooks
+moddump
+handles
+
+

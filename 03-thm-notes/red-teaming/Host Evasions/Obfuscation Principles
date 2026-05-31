@@ -1,0 +1,103 @@
+-evade modern detection engineering
+-understand obfuscation
+-implement obfuscation methods
+
+Machine IP,
+user: Student
+pass: TryHackMe!
+
+-software related fields to protect intellectual property
+layers of obfuscation
+Software Obfuscation > Code-Element, Software-Component, Inter-Component, Application Layer
+Code-Element > 
+  Obfuscating Layout >
+    >Junk Code
+    >Seperation of Related Codes
+    >Stripping Redundant Symbols
+    >Meaningless Identifiers
+  Obfuscating Controls >
+    >Implicit Controls
+    >Dispatcher-based Controls
+    >Probablisitic Control Flows
+    >Bogus Control Flows
+  Obfuscating Data >
+    >Array Transformation -  transforms an array by splitting, merging, folding and flattening
+    >Data Encoding - encodes data with mathematical functions or ciphers
+    >Data Procedurization - substitutes static data with procedure calls
+    >Data Splitting/Merging - distributes info of one var into several new var
+  Obfuscating Methods >
+    >Method Proxy
+    >Method Scattering/Aggregation
+    >Method Clone
+    >Method Inline/Outline
+  Obfuscating Classes >
+    >Class Hierarchy flattening
+    >Class Splitting/coalescing
+    >Dropping Modifiers
+Signature Evasion Room    
+    
+---------------------------------------------------------------------------------------------------------------------------------
+    
+Concatenation: combining two separate objects into a one object 
+-can be used to modify signatures or manipulate other aspects of an application
+-eg: static signatures - defined string "AmsiScanBuffer"
+IntPtr ASBPtr = GetProcAddress(TargetDLL, "AmsiScanBuffer"); //alerts
+IntPtr ASBPtr = GetProcAddress(TargetDLL, "Amsi" + "Scan" + "Buffer"); //no alerts
+-non-interpreted characters: used to disrupt or confuse a static signature
+-breaks, reorders, whitespace, ticks, Random case
+
+challenge: obfuscate .ps1 code snippet using concatination and upload into the webserver to get the flag
+original: [Ref].Assmebly.GetType('System.Management.Automation.AmsiUtils').GetField('amsiInitFailed','NonPublic,Static').SetValue($null,$true)
+obfuscated: $Value="SetValue" [Ref}.Assmebly.GetType('System.Management.Automation.'+'Amsi'+'Utils').GetField('amsi'+'Init'+'Failed','No'+'nPublic,S'+'tatic).$Value($null,$true)
+THM{koNC473n473_4LI_7H3_7H1n95}
+
+------------------------------------------------------------------------------------------------------------------------------------------
+
+Obfuscation for Analysis Deception
+
+Junk Code -> Add junk instructions that are non-functional, also known as a code stubs
+Separation of Related Code -> Separate related codes or instructions to increase difficulty in reading the program
+Stripping Redundant Symbols -> Strips symbolic information such as debug information or other symbol tables
+Meaningless Identifiers -> Transform a meaningful identifier to something meaningless
+Implicit Controls -> Converts explicit controls instructions to implicit instructions
+Dispatcher-based Controls -> Determines the next block to be executed during the runtime
+Probabilistic Control Flows -> Introduces replications of control flows with the same semantics but different syntax
+Bogus Control Flows -> Control flows deliberately added to a program but will never be executed
+
+Junk code -> Code stubs
+manipulate code flow and abstract syntax trees -> Obfuscating Controls
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+Code flow and logic
+-control flow: critical component of a program's execution that determines how a program logically proceeds
+-Logic: significant part of an app's control flow determines which steps it will take as it proceeds through the program
+-eg logic (if/else, try/catch, switch case, for loops, while loops)
+
+-----------------------------------------------------------------------------------------------------------------------------------
+
+Arbitrary Controls flow patterns
+-Arbitrary control flow patterns - leverage math, logic and algorithms to inject a different control flow into a malicious function
+-Predicates - decision-making input function
+-Opaque predicates - used to control known output and input (https://etda.libraries.psu.edu/files/final_submissions/17513)
+-example: Collatz Conjecture: if two arithmetic operations are repeated, they will return one from every positive integer
+
+THM{D3Cod3d!!!}
+
+-------------------------------------------------------------------------------------------------------------------------------------
+
+Protecting and Stripping identifiable info
+
+Object names
+-can reveal exact purpose of a function
+-Interpreted language(python or powershell)- all objects must be modified
+-Compiled(c or c#) - only objects appearing in the strings
+
+\strings.exe "\Injector.exe"
+-junk code and reordering code used as additional measures to add complexity to an itnerpreted program
+
+-remove symbols from a compiler like VS, change compilation target from Debug to Release or use mingw
+-remove symbols from precompiled image using command-line utility: strip
+
+flag: THM{Y0Ur_1NF0_15_M1N3}
+

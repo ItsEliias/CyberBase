@@ -1,0 +1,214 @@
+Osquery is an open-source tool created by Facebook. 
+-query an endpoint or multiple endpoints using SQL syntax. 
+-can be installed on multiple platforms: Windows, Linux, MacOS and FreeBSD
+
+>osqueryi
+>.help
+-displays the help menu
+
+>.tables process
+-list all the available tables associated with processes
+
+>.schema table_name
+-list a table's schema
+
+'--enable_foreign'
+-check schema for another OS
+
+.show
+-Osquery version
+-SQlite version
+-default output mode
+
+.mode line
+-show one value per line
+
+.exit, .quit
+-exit Osqueryi
+
+---------------------------------------------------------------------------------------------
+
+Schema Documentation
+
+What table would you query to get the version of osquery installed on the windows endpoint?
+.mode line
+select * from  osquery_info;
+
+How many tables are there for this version of osquery(4.6.0)?
+266
+
+How many of the tables are compatible with windows?
+96
+
+How many are compatible with Linux?
+155
+
+What is the first table listed that is compatible with both Linux and Windows?
+arp_cache
+
+--------------------------------------------------------------------------------------
+
+Creating Queries
+-Osquery: is superset of SQLite
+-start with 'SELECT' statement
+-Osquery only queries information, no updating or deleting any information/data
+-SQL statements such as 'UPDATE' and 'DELETE' are possible only if creating run-time tables(views) or using an extension(if supported)
+-also include a 'FROM' clause and end with semicolon';'
+eg query:
+SELECT * FROM processes; //select all from processes
+SELECT pid, name, path FROM processes; //select specific sections from processes
+
+-count() function can be used to get exactly how many
+eg: SELECT count(*) FROM processes;
+
+-'WHERE' clause to narrow down list of returned results based on specified criteria
+eg: SELECT pid, name, path FROM processes WHERE name='lsass.exe';
+
+-other filtering options 
+= [equal]
+<>  [not equal]
+>, >= [greater than, greater than or equal to]
+<, <= [less than or less than or equal to] 
+BETWEEN [between a range]
+LIKE [pattern wildcard searches]
+% [wildcard, multiple characters]
+_ [wildcard, one character]
+
+-pattern matching
+%: match all files and folders for one level
+%%: match all files and folders recursively
+%abc: match all within-level ending with "abc"
+abc%: match all within-level starting with "abc"
+
+What is the query to show the username field from the users table where the username is 3 characters long and ends with 'en'?
+SELECT username FROM users WHERE username like '%en';
+
+
+How many programs are installed on this host?
+SELECT count(*) FROM programs;
+
+What is the description for the user 'James'?
+SELECT * FROM users WHERE username='James';
+
+What is the full SID of the user with RID '1009'?
+SELECT path, key, name FROM registry WHERE key='HKEY_USERS';
+
+What is the IE browser extension installed on the machine?
+SELECT * FROM ie_extensions;
+
+After running the following query, what is the full name of the program returned?
+Query: select name,install_location from programs where name LIKE '%wireshark%';
+
+
+
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Kolide Fleet
+-can query multiple endpoints from kolide fleet UI
+-follow steps
+-login in
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+Osquery Extensions
+-Anyone can create extensions for osquery
+-documentation: https://osquery.readthedocs.io/en/latest/deployment/extensions/
+https://github.com/polylogyx/osq-ext-bin: 25 features
+
+----------------------------------------------------------------------------------------------------------------------------------------
+
+Current_value for kernel.osrelease?
+SELECT * FROM kernel_info;
+-4.4.0-17763-Microsoft
+
+UID for bravo user?
+SELECT username, uid FROM users WHERE username='bravo';
+-1002
+
+One of the users performed a 'Binary Padding' attack. What was the target file in the attack?
+SELECT * FROM  shell_history;
+-notsus
+
+What is the hash value for this file?
+ls
+md5sum notsus
+-3df6a21c6d0c554719cffa6ee2ae0df7
+
+Check all file hashes in the home direcotry for each user. one file will not show any hashes. Which file is that?
+SELECT * FROM hash WHERE path='/home/tryhackme' AND directory='/home/tryhackme';
+-fleet.zip
+
+There is a file that is categorized as malicious in one of the home directories. Query the Yara table to find this file. Use the sigfile which is saved in '/var/osquery/yara/scanner.yara'. Which file is it?
+SELECT * FROM yara WHERE path="/home/%%" AND sigfile="/var/osquery/yara/scanner.yara";
+-notes
+
+what were the 'matches'?
+-eicar_regex:0,$eicar_substring:1b
+
+Scan the file from Q#3 with the same Yara file. What is the entry for 'strings'?
+$eicar_substring:1b
+
+-------------------------------------------------------------------------------------------
+
+Windows OSquery
+
+Description for the Windows Defender Service?
+SELECT name,description FROM services WHERE name LIKE "WinD%"
+-Helps protect users from malware and other potentially unwanted software
+
+Another security agent?
+SELECT name FROM programs;
+-AlienVault Agent
+
+required with win_event_log_data?
+-Source
+
+SELECT count(*) FROM win_event_log_channels;
+1076
+
+Schema for win_event_log_data
+CREATE TABLE win_event_log_data(`time` BIGINT, `datetime` TEXT, `source` TEXT, `provider_name` TEXT, `provider_guid` TEXT, `eventid` INTEGER, `task` INTEGER, `level` INTEGER, `keywords` BIGINT, `data` TEXT, `eid` TEXT)
+
+The previous file scanned on the Linux endpoint with Yara is on the Windows endpoint.  What date/time was this file first detected? (Answer format: YYYY-MM-DD HH:MM:SS)
+-https://docs.microsoft.com/en-us/windows/security/threat-protection/microsoft-defender-antivirus/troubleshoot-microsoft-defender-antivirus
+-look for error 1116
+SELECT datetime from win_event_log_data WHERE source = "Microsoft-Windows-Windows Defender/Operation" and eventid=1116;
+-2021-04-01T00:50:44
+
+What is the query to find the first Sysmon event? Select only the event id, order by date/time, and limit the output to only 1 entry.
+SELECT eventid FROM win_event_log_data WHERE source="Microsoft-Windows-Sysmon/Operational" order by datetime limit 1;
+
+----------------------------------------------------------------------
+
+Which table stores evidence of process execution in windows os?
+userassist
+
+One of the users seems to have executed a program to remove traces from the disk; what is the name of that program?
+SELECT * FROM userassist;
+DiskWipe.exe
+
+Create a search query to identify the VPN installed on this host. What is name of the software?
+SELECT name FROM programs;
+ProtonVPN
+
+How many services are running on this host?
+SELECT count(*) FROM services;
+214
+
+A table autoexec contains the list of executables that are automatically executed on the target machine. There seems to be a batch file that runs automatically. What is the name of that batch file (with the extension .bat)?
+SELECT * FROM autoexec WHERE name LIKE '%.bat%';
+batstartup.bat
+C:\Users\James\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\batstartup.bat
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,103 @@
+Key Terms
+Ciphertext - The result of encrypting a plaintext, encrypted data
+Cipher - A method of encrypting or decrypting data. Modern ciphers are cryptographic, but there are many non cryptographic ciphers like Caesar.
+Plaintext - Data before encryption, often text but not always. Could be a photograph or other file
+Encryption - Transforming data into ciphertext, using a cipher.
+Encoding - NOT a form of encryption, just a form of data representation like base64. Immediately reversible.
+Key - Some information that is needed to correctly decrypt the ciphertext and obtain the plaintext.
+Passphrase - Separate to the key, a passphrase is similar to a password and used to protect a key.
+Asymmetric encryption - Uses different keys to encrypt and decrypt.
+Symmetric encryption - Uses the same key to encrypt and decrypt
+Brute force - Attacking cryptography by trying every different password or every different key
+Cryptanalysis - Attacking cryptography by finding a weakness in the underlying maths
+Alice and Bob - Used to represent 2 people who generally want to communicate. They’re named Alice and Bob because this gives them the initials A and B. https://en.wikipedia.org/wiki/Alice_and_Bob for more information, as these extend through the alphabet to represent many different people involved in communication.
+-SSH keys are protected with a passphrase
+
+Encryption
+-crytography is used to protect confidentiality and ensure integrity and authenticity
+-sensitive user data need to encrypted
+-PCI-DSS standard: data should be in storage and during transmission
+
+Crucial Cypto Maths
+-Modulo Operator: x % y is the remainder of x / y
+eg: 25 % 5 = 0 (remainder is 0)
+eg: 23 % 5 = 3 (remainder is 3)
+eg: 23 % 6 = 5 (remainder is 5)
+-modulo is not reversible because infinite values 
+x % 5 = 4
+
+Types of Encryption
+1. Symmetric: uses the same key to encrypt and decrypt the data
+-DES: 56 bits long - broken
+-AES: 128 and 256 bit long
+2. Asymmetric: uses a pair of keys, one to encrypt and the other to decrypt, private and public keys
+-RSA - 2048 to 4096 bit keys
+-Elliptic Curve
+*private keys need to be private
+Triple DES - result of the attempt to make DES more secure so that it could be used for longer
+
+RSA - Rivest Shamir Adleman
+-mathematically difficult problem of working out the factors of a large number
+-difficult to figure out what two prime numbers multiply to make a certain value (prime factor)
+-tools used to breaking encryption based on RSA (https://github.com/Ganapati/RsaCtfTool) (https://github.com/ius/rsatool)
+-Variable: p, q, m, n, e, d, c
+p & q: large prime numbers
+n: product of p & q
+n + e: public key
+n + d: private key
+m: message in plain text
+c: cipher text (encrypted text)
+-Blog post further math: https://muirlandoracle.co.uk/2020/01/29/rsa-encryption/
+
+Asymmetric Cryptography
+-common use is to exchange keys for symmetric encryption
+-slower
+-symmetric encryption key, server's public key and server's private key
+-asymmetric cryptography used only once, fast private communication achieved
+-done using digital signitures and certificates
+
+Digital Signatures
+-way to prove authenticity of files
+-proff of who created or modified files
+-signatures performed using private key
+-Certificates: used in HTTPS
+-web browser knows it's talking to the right server using certificates
+-chain of trust starting with root CA (Certificate Authority)
+-Root CAs say they trust the organization
+-How CAs work https://robertheaton.com/2014/03/27/how-does-https-actually-work/
+
+SSH Authentication
+-SSH is authenticated using usernames and passwords
+-SSH can be configured with key authentication instead (uses private and public keys)
+-'ssh-keygen' program used to generate pairs of keys 
+-Private SSH keys = passwords
+-SSH key can be decrypted by using tool such as John the Ripper to find the passphrase
+-found in ~/.ssh folder
+-'authorized_keys' - file in the directory holds public keys that are allowed to access the server if key auth is enabled
+-To use private SSH key, permission must be set up correcly otherwise, SSH client will ignore the file with a warning
+eg: ssh -i [key] [user]@[hostIP]
+-ssh2john to turn rsa_key to hash to feed into john
+python ssh2john.py rsa_key > hash
+john --wordlist=rockyou.txt --format=ssh hash
+
+Diffie Hellman Key Exchange
+-key exchange allows 2 people/parties to establish a set of common cryptographic keys without an observer being able to get these keys
+-Alice(A) and Bob(B) want to communicate, they have a common material C
+-Alice and Bob will combine their secrets with the common material and form AC and BC
+-Send to eachother, combined they both have ABC (key used to communicate)
+-video explanation: https://www.youtube.com/watch?v=NmM9HA2MQGI
+
+PGP,GPG and AES
+-PGP: Pretty Good Privacy: software that implements encrption for encrypting files, performing digital signing and more
+-GPG: (GnuPG): Open source implementation of PGP from the GNU project
+-PGP/GPG: private keys can be protected with passphrases
+-Cracking can be done using gpg2john and feed into john the ripper
+-AES: Rijnndael - Advance Encryption Standard - replacement for DES(short key) - provides longer keys
+-Video explanation of AES: https://www.youtube.com/watch?v=O4xNJsjtN6E
+
+Future - Quantum Computers and Encryption
+-Asymmetric and Quantum: quantum computers can possibly easily break current encryption algorithms
+-Current Recommendations: RSA-3072 for Asymmetric Encryption and AES-256 or better for Symmetric encryption
+-Cryptography Apocalypse by Roger A. Grimes
+
+

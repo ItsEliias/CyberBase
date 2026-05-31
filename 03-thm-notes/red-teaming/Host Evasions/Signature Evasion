@@ -1,0 +1,104 @@
+1.Find signatures in malicious code
+2.Implement documented obfuscation methodology to break signatures
+3. non-obfuscation-based techniques to break non-function oriented signatures
+
+----------------------------------------------------------------------------------
+
+head, dd, or split: split a compiled binary
+eg. head --bytes 29 example.exe > half.exe
+
+ThreatChecker.exe -f shell.exe -e ASMI
+-round to nearest thousand
+51000
+
+
+-----------------------------------------------------------------------------------
+
+Automating Signature Identification
+-Find-AVSignature will split a provided range of bytes through a given interval
+-need to set appropriate interval
+
+ThreatCheck
+-fork of DefenderCheck 
+-most widely used/reliable 
+-used to id signatures
+ThreatCheck.exe --help
+-f: file
+-u: url
+-e: scanning engine (options: Defender(default), AMSI)
+-false positives could occur
+
+AMSITrigger
+-runtime
+-makes signatures harder to id and resolve
+amsitrigger.exe --help
+-i: input value, inputfile
+-u: url
+-f: format
+-d: debug
+-m: maximum signature length, default 2048
+-c: chunk size default 4096
+
+ThreatChecker.exe -f shell.exe -e ASMI
+-bad byte at offset: 0xC544
+
+--------------------------------------------------------------------------------------------------------
+Obfuscating methods
+1. Method Proxy: Creates a proxy method or a replacement object
+2. Method Scattering/Aggregation: COmbine multiple methods into one or scatter a method into several
+3. Method Clone: Create replicas of methhod and randomly call each
+
+Obfuscating classes:
+1. Class Hierarchy Flattening: create proxies of classes using interfaces
+2. Class Splitting/Coalescing: transfer local variables or instruction groups to another class
+3. Dropping Modifiers: Remove class modifiers (public, private) and make all members public
+
+Splitting and Merging Objects
+-original string is detected
+-obfuscated using a new class that breaks down the string to smaller chunks and concatinates them back to the original string when the new class is called
+
+Removing identifiable information
+-the string that causes an alert is replaced by any random identifier changed throughout all instances of the string
+
+----------------------------------------------------------------------------------------------------------------
+
+Static Property based signatures
+-signatures attached to file properties such as hash, entropy, author, name or other identifiable information
+-properties used in rule sets such as YARA or Sigma
+
+File Hashes
+-checksum: verify authenticiy or known purpose
+-can modify aribitry section of code and re-compile it to create a new hash
+-bit-flipping: cryptographic attack that will mutate a given application by flipping and testing each possible bit until it find a viable bit
+-signtool used to search for a file with usable certificate - file not broken and maintain signed attribution
+
+Entropy
+-randomness of the data
+-to lower entropy - replace random identifiers with randomly selected english words
+-use CyberChef to see changes in entropy
+-suspicious entropy is value greater than 6.8
+
+------------------------------------------------------------------------------------------------------------------------
+
+Behavioral Signatures
+-observing imports and hooking known malicious calls: trigger AV engines
+-import libraries such as kernel32 or ntdll
+-Windows loader - IAT (Import Address Table) - store function addresses for all imported functions that can assign a pointer for the function
+-IAT is stored in the PE (Portable Executable) header IMAGE_OPTIONAL_HEADER
+-Windows loader obtains the function addresses (Thunk) from thunk table
+-Can also obtain pointer for function addres using dynamic loading to avoid IAT and minimize use of Windows Loader
+-Steps: Define the structure of the call, obtain handle of the module, obtain process address, use the newly created call
+-PIC (Position Independent Code) - hook specific function
+
+THM{N0_1MP0r75_F0r_Y0U}
+
+--------------------------------------------------------------------------------------------------------
+
+get challenge.c change ip and port
+install mingw: sudo apt install mingw-w64
+compile: x86_64-w64-mingw32-gcc challenge.c -o challenge.exe -lwsock32 -lws2_32 
+nc -lvp [port from challenge.c]
+go to target ip: http://[IP]
+-upload challenge.exe
+-go to C:\Users\Administator\Desktop\flag.txt
+flag: THM{08FU5C4710N_15 MY_10V3_14N6U463}

@@ -1,0 +1,78 @@
+File uploads can open up severe vulnerabilities in the server can lead to RCE, unrestricted access to server, deface or alter content
+-could potentially also use server to host/serve illegal content or leak sensitive information 
+
+https://tryhackme.com/room/ccpentesting
+
+Enumeration
+-check if client-side filtering is being applied
+-scan with gobuster
+-use burpsuite and wappalyser
+-if server-side filtering, need to guess what the filter is looking for, change based on error messages
+
+Overwriting existing files: 
+1. enumerate and find the src of image
+2. upload an image with the same name
+
+Remote Code Execution:
+-written in the same language as the backend of the website (PHP, Python Django, Javascript Node.js)
+-use webshells and reverse shells
+-webshell if file length limit has been imposed on uploads
+1. gobuster scan
+gobuster dir -u http://example.com -w wordlist.txt
+2. write a webshell
+-PHP code takes GET parameter and executes it as a system command and echoes oupt to the screen
+<?php
+	echo system($_GET["cmd"]);
+?>
+3. reverse shells:
+-netcat listener
+nc -lvnp 1234
+
+Filtering
+1. client-side: running in the user's web browser
+-javascript traditionally
+-filtering occurs before the file is even uploaded to the server
+-easy to bypas because it runs on the clients computer
+-by itself is highly insecure
+2. server-side: running on the server
+-PHP traditionally, ASP, C#, Node.js, Python, Ruby on Rails... others
+-more difficult to bypass
+-use payload that conforms to the filters in place but allows the execution of code
+Extension validation: identify contents of a file. used by MS windows. Blacklist and whitelist certain extensions
+File Type filtering: verify the contents of a file are acceptable to upload
+	MIME validation: Multiputpose Internet Mail Extension - types are used as an identifier for files - 			checks extension, easy to bypass
+	Magic Number Validation: file is a string of bytes at the very beginning of the file content; 		        certain types of file have certain hex values that can be stopped
+File Length Filtering: prevent huge files from being uploaded so uploaded shells must be below the maximum
+File Name filtering: files uploaded to the server should be unique; check if there is a file name already exists on the server and return an error; file name sanitized to remove "bad characters" and control characters ";" and unicode characters
+File Content filtering: scan full contents of an uploaded file to ensure its not spoofing its extension, MIME or magic number
+
+Bypassing Client-side Filtering
+1. Turn off javascript in the browser: works if site doesn't require javascript in order to provide basic functionality
+2. Intercept and modify incoming page: using burpsuite intercept incoming web page and strip out js filter
+3. Intercept and modify file upload: intercept file upload after it's accepted by the filter
+4. Send file directly to the upload point: using tool like curl post data directly to the page that contais the code for handling the file upload
+'curl -X POST -F "submit:<value>" -F "<file-parameter>:@<path-to-file>" <site>'
+
+Bypassing Server-side Filtering: File Extensions
+-code is hidden in the server
+-.php and .phtm - blacklisted; Could be bypassed by .php3, .php4, .php5, .php7, .phps, .php-s, .pht and .phar
+-enumerated to find which file extensions are accepted or rejected
+-filtering function may look for only the first period; if .jpg is accepted and .php is rejected, could be bypassed by shell.jpg.php
+
+Bypassing Server-side Filtering: Magic Numbers
+-magic numbers are more accurate identifier of files
+-string of hex digits (first thing in a file)
+-strings are compared against a whitelist or a blacklist
+-more effective on PHP based webservers
+-list of file signatures https://en.wikipedia.org/wiki/List_of_file_signatures
+use hexedit to change the signuture hex value
+
+Example Methodology
+-1. using wappalyzer to look for indicator of what languages and frameworks the web application might have been built with (not 100% accurate but a good start). Use burpsuite to intercept response and look for 'server' or 'x-powered-by'
+-2. look and find an upload page. look for clinet side scripts to bypass any client-side filters
+-3. attempt innocent file upload, to see how file is accessed. use tools such as Gobuster. -x switch -x php,txt,html look for specific extension
+-4. attempt a malicious file upload
+-5. upload invalid extension. if accepted extension is using blacklist, if rejected it is using whitelist
+-6. try original innocent file with changed magic number
+-7. change the MIME type 
+-8. Enumerate file length filters

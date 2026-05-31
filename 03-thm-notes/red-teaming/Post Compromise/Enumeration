@@ -1,0 +1,163 @@
+-switch to powershell from cmd
+powershell.exe
+
+-post-exploitation enumeration is to gather as much information about the system and its network
+-gain formation to be able to pivot to other systems on the network
+-gain access to private ssh key to generate a public and private ssh key pair
+-look for sensitive data such as 'passwords.txt'
+
+----------------------------------------------------------------------------------------------------
+
+Linux Enumeration
+
+ssh user@[IP]
+password: THM6877
+
+-get more information about the linux distribution and release version
+ls /etc/*-release
+cat /etc/os-release
+
+*Ubuntu
+*20.04.4 LTS (Focal Fossa)
+
+-get hostname
+hostname
+
+-useful information in /etc/passwd, /etc/group, and /etc/shadow
+cat /etc/passwd
+cat /etc/group
+cat /etc/shadow
+
+-mail directories
+ls -lh /var/mail/
+
+-find installed applications
+ls -lh /usr/bin/
+ls -lh /sbin/
+-query all packages in RPM-based Linux systems
+rpm -qa
+-list installed packages in Debian-based Linux system
+dpkg -l
+
+-USERS
+-show who is logged in 
+who
+-shows who is logged in and what they are doing
+w
+-list of last logged-in users
+last
+*randa
+-print the real and effective user and group IDs 
+id
+-list the allowed command for the invoking user
+sudo -l
+
+-NETWORKING
+-show ip address
+ip a s
+-show DNS servers
+cat /etc/resolv.conf
+-return programs listening on TCP sockets
+netstat -plt
+-show all TCp and UDP listening and established connections and program names with addresses and ports 
+netstat -atupn
+*6667
+sudo netstat -atupn
+*inspircd
+
+-RUNNING SERVICES
+-snapshot of running processes
+ps
+-list all processes 
+ps -e
+-list all processes with full format
+ps -ef
+-visual out print process tree
+ps axjf
+ps axjf | grep THM
+*THM-24765.sh
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Windows Enumeration
+
+SYSTEM
+-information about the system, such as build number and installed patches
+systeminfo
+*Microsoft Windows Server 2019 Datacenter
+*10.0.17763
+*30 hotfixes
+-check installed updates 
+wmic qfe get Caption, Description
+-check installed and started Windows services 
+net start
+-check installed apps
+wmic product get name,version,vendor
+
+USERS
+-get who the current user is 
+whoami
+-get group current user is in
+whoami /groups
+-view users
+net user
+-discover available groups 
+net localgroup
+-list users belonging to local administrators' group
+net localgroup administrators
+-see local settings on a machine
+net accounts
+-see if machine belongs to a domain
+net accounts /domain
+
+NETWORKING
+-learn more about system network configuration
+ipconfig
+-all network related settings
+ipconfig /all
+-get various information such as active ports the system is litening on
+-a: display all listening ports and active connections
+-b: find bnary involved in the connection
+-n: avaoid resolving IP addresses and port numbers
+-o: display process ID
+netstat -abno
+*22
+*sshd.exe
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+DNS
+-Domain name system - look up A, AAAA, CName and TXT records
+DNS in detail room: https://tryhackme.com/room/dnsindetail
+-dig command covered in the passive recon room: https://tryhackme.com/room/passiverecon
+dig -t AXFR DOMAIN_NAME @DNS_SERVER
+-t AXFR: request zone transfer
+*THM{DNS_ZONE}
+
+SMB 
+-Server Message Block: communication protocol provides access to files and printers
+net share
+*THM{829738}
+
+SNMP
+-Simple Network Management Protocol: help collection info about different devices on the network
+cd /opt/snmpcheck
+ruby snmpcheck.rb [IP] -c [Community String] | more
+*THM{SNMP_SERVICE}
+
+-------------------------------------------------------------------------------------------------------------------------------
+
+More Tools for Windows
+1. SysInternals Suite: CLI and GUI tools
+a. process explorer: shows processes along with open files and reg keys
+b. process monitor: monitor file system, processes and reg
+c. pslist: provide info about processes
+d. psloggedon: shows logged-in users
+
+2. process hacker
+-GUI tool, gather info about running processes
+
+3. ghostpack seatbelt
+-C#, self compile using visual studio
+
+

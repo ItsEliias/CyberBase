@@ -1,0 +1,144 @@
+Sysinternals
+-compilation of over 70+ Windows-based tools
+-Categories of tools:
+1. File and Disk Utilities
+2. Netwoork Utilities
+3. Process Utilities
+4. Security Utilities
+5. System Information
+6. Miscellaneous
+
+
+-----------------------------------------------------------------
+
+install sysinternals suite
+
+powershell
+get-service webclient
+start-service webclient
+control.exe /name Microsoft.NetworkAndSharingCenter > Advanced sharing > Turn on network Discovery
+powershell
+Install-WindowsFeature WebDAV-Redirector -Restart
+Get-WindowsFeature WebDAV-Redirector | Format-Table -Autosize
+
+Command line:
+\\live.sysinternals.com\tools\procmon.exe
+
+What service needs to be enabled on the local host to interact with live.sysinternals.com? Webclient
+
+-----------------------------------------------------------------------
+
+Sigcheck
+-command-line utility that shows file version number, timestamp information, digital signature details
+-check for unsigned files in C:\Windows\System32
+sigcheck -u -e C:\Windows\System32 -accepteula
+-u: shows files that are unknown by virusTotal or have non-zero detection, unsigned files
+-e: scan executable images only regardless of their extension
+
+Streams
+NTFS: new technology file system, every file has at least one data stream ($DATA) 
+-ADS: alternate data streams allows files to contain more than one stream of data
+-Windows explorer doesn't natively display ADS to the user
+-Malware writers have used ADS to hide data in an endpoint but not all its users are malicious
+
+SDelete
+-commandline utility that take a number of options and allows the user to delete one or more files and/or directories or to cleanse the free space on a logical disk
+-Secure Delete 
+-DOD 5220.22-M Wipe Method
+1. zero - verifies the write
+2. one - verifies the write
+3. writes a random character and verifies the write
+-used by Adversaries in Data Destruction, Indicator Removal on Host:File Deletion
+
+stream file.txt
+file.txt:ads.txt
+answer: I am hiding in this stream
+
+-------------------------------------------------------------------------------------------------------------
+
+TCPView
+-Windows program that shows detailed listing of all TCP and UDP endpoints on your system
+-Tcpvcon: command-line version with same functionality
+-Resource Monitor tool has simliar functionality - built in utility on Windows
+-command-line: resmon
+
+tcpview -accepteula
+52.152.110.14 - Microsoft Corporation
+
+------------------------------------------------------------------------------------------------------------
+
+Autoruns
+-shows what programs are configured to run during system bootup or login
+-Autoruns reports explorer shell extensions, toolbars, browser helper objects, winlogon notification, auto-start services and more
+-Good tool to search for any malicious entries
+
+ProcDump
+-command-line utility that monitors an application of CPU spikes and generating crash dumps during spike
+
+Process Explorer
+-consists of two sub-windows
+-Top: list of currenlty active processes, names of owning accounts
+-Bottom: handle-mode - handles that the process selected. DLL-mode - dlls and memory-mapped files that the process has loaded
+-check TCP/IP tab to see Remote address
+-look up IP using WHOIS
+-can verify signatures using ProcExp
+
+Process Monitor
+-command-line: procmon -accepteula
+-advanced monitoring tool for windows
+-Guide to configure procmon: https://adamtheautomator.com/procmon/
+
+PsExec
+-light-weight telnet-replacement that allows the execution of processes on other systems
+-interactive command-prompts on remote systems
+-remote-enabling tools like IpConfig
+-additional info: https://docs.microsoft.com/en-us/sysinternals/downloads/psexec
+
+command-line: autoruns -accepteula
+Image Hijacks tab > taskmgr.exe
+updated value: C:\TOOLS\SYSINT\PROCEXP.EXE
+
+----------------------------------------------------------------------------------------------------
+
+Sysmon
+-Windows system service and driver
+-resident across system reboots to monitor and log system activity to the windows event log
+-uses Windows Event Collection (SIEM)
+-sysmon room: https://tryhackme.com/room/sysmon
+
+-----------------------------------------------------------------------------------------------------
+
+WinObj
+-a 32-bit windows NT program
+-uses native Windows NT API (Provided by NTDLL.DLL) to access and display information on the NT Object Manager's name space
+-Session 0 - OS session, Session 1 - User session
+-more info: https://docs.microsoft.com/en-us/sysinternals/downloads/system-information
+
+----------------------------------------------------------------------------------------------------------
+
+BgInfo
+-displays relevant information about a windows computer on the desktop background
+-computer name, IP, service pack version and more
+more: https://docs.microsoft.com/en-us/sysinternals/downloads/bginfo
+
+RegJump
+-command-line applet take a registry path and makes a Regedit open to the path
+regjump -accepteula
+regjump HKLM\System\CurrentControlSet\Services\WebClient -accepteula
+
+Strings
+-scans the file passed to it for UNICODE (or ASCII) strings of a default length of 3 or more UNICODE (or ASCII) characters
+-example strings used to search within ZoomIt binary for any strings containing the word 'zoom'
+PS C:\Tools\sysint> strings .\ZoomIt.exe | findstr /i zoom*
+full path to .pdb file: C:\agent\_work\112\s\Win32\Release\ZoomIt.pdb
+
+-------------------------------------------------------------------------------------------------------------
+
+additional Info:
+
+Mark's Blog - https://docs.microsoft.com/en-us/archive/blogs/markrussinovich/
+Windows Blog Archive - https://techcommunity.microsoft.com/t5/windows-blog-archive/bg-p/Windows-Blog-Archive/label-name/Mark%20Russinovich
+License to Kill: Malware Hunting with Sysinternals Tools - https://www.youtube.com/watch?v=A_TPZxuTzBU
+Malware Hunting with Mark Russinovich and the Sysinternals Tools - https://www.youtube.com/watch?v=vW8eAqZyWeo
+
+

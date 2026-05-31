@@ -1,0 +1,121 @@
+Processes
+-A process maintains and represents the execution of a program
+-An application can contain one or more processes
+-has a virtual address space, executable code, open handles to system objects, a security context etc
+-eg:
+1. MsMpEng(microsoft defender)
+2. wininit(keyboard and mouse)
+3. lsass(cred storage)
+-attackers can target processes to evade detection and hide malware as legitimate processes
+a. process injection
+b. process hollowing
+c. process masquerading
+Private Virtual Address Space -> Virtual memory addresses that the process is allocated.
+Executable Program -> Defines code and data stored in the virtual address space.
+Open Handles -> Defines handles to system resources accessible to the process.
+Security Context -> The access token defines the user, security groups, privileges, and other security information.
+Process ID -> Unique numerical identifier of the process.
+Threads -> Section of a process scheduled for execution.
+
+open procmon
+-open Logfile.pml
+-filter by process name notepad.exe
+5984
+-go to event properties -> process
+3412
+-event properties -> process
+High
+
+----------------------------------------------------------------------------------------------------------------------------------
+
+Threads
+-A thread: is an executable unit employed by a process
+-scheduled based on CPU and memory specs, priority and logical factors etc
+-controls execution of process
+Stack -> All data relevant and specific to the thread (exceptions, procedure calls, etc.)
+Thread Local Storage -> Pointers for allocating storage to a unique data environment
+Stack Argument -> Unique value assigned to each thread
+Context Structure -> Holds machine register values maintained by the kernel
+open procmon
+-open Logfile.pml
+-threadId created by notepad.exe
+5908
+-stack argument of previous thread?
+6584
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+Virtual Memory
+-allows other internal components to interact with memory as if it was physical memory without risk of collisions b/n applications
+-provides each process with private virtual address space
+-memory manager translates virual to physical addresses
+-apps may use more virtual memory vs physical memory
+-theoretical maximum virtual address space is 4GB on a 32-bit x86 system
+-theoretical maximum virtual address space is 256TB on 64-bit system
+-flag used to reallocate user process address space: increaseUserVA
+-open procmon
+-open file Logfile.PML
+-filter for process name: notepad.exe
+-search for "load image"
+-image base: 0x7ff652ec0000
+
+-------------------------------------------------------------------------------------------------------------------------
+
+Dynamic Link Libraries
+DLL: library that contains code and data that can be used by more than one program at the same time
+-modularize code
+-reuse code
+-efficient memory usage 
+-reduced disk space
+-DLL is assigned as dependency
+-attackers target DLL instead of application because it is required 
+-loaded into program using load-time dynamic linking(.h header) or run-time dynamic linking (LoadLibrary and GetProcAddress)
+open Logfile.PML in procmon
+-filter by process name: notepad.exe
+-search for ntdll.dll
+base address: 0x7ffd0be20000
+process: size of ntdll.dll - 0x1ec000
+filter by operation: Load Image - 51
+
+------------------------------------------------------------------------------------------------------------------------------------------
+
+Portable Executable format
+-PE: portable executable - defines the information about the executable and stored data
+-commonly seen in hex dump of exe file
+-DOS Header defines the type of file (MZ - exe)
+-DOS Stub is a program run by default (doesn't affect functionality) - prints "This program cannot be run in DOS mode."
+-PE file Header provides PE header information of the binary
+-Image optional header - important part of PE file header
+-Data dictionaries - part of optional header - point to image data directory structure
+-Section Table: defines available sections and information in image
+
+-open Detect It Easy(die)
+-drag notepad.exe
+-scan
+Entry point: 000000014001acd0
+number of sections: 0006
+-click on PE
+-click on Sections Tab
+-click on .data
+virtual address: 00024000
+-go to Strings tab
+-go to offset 0001f99c
+string: Microsoft.Notepad
+
+----------------------------------------------------------------------------------------------------------------------------------------
+ 
+ Interacting with Windows Internals
+ -through Windows API calls
+ -contains Win32 API and Win64 API
+ -intereact with phsical hardware and memory
+ -Windows kernel bridge all software and hardware interactions
+ -Application requires an interface to interact with kernel or modify physical hardware using processor mode and access levels
+ -user mode vs kernel mode
+No direct hardware access vs Direct hardware access
+Creates a process in a private virtual address space vs Ran in a single shared virtual address space
+Access to "owned memory locations" vs Access to entire physical memory
+-use OpenProcess
+open cmd.exe
+cd Desktop/Process Injection POC
+inject-poc.exe
+flag: THM{1Nj3c7_4lL_7H3_7h1NG2}

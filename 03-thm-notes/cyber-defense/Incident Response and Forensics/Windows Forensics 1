@@ -1,0 +1,285 @@
+Introduction to Windows Forensics
+-Computer forensics: gathering evidence of activities performed on computers
+-part of wider Digital Forensics
+-80% of desktop computers run Microsoft Windows
+
+Forensic Artifacts
+-Artifact: essential pieces of information that provide evidence of human activity.
+-footprints of activity left on the computer system
+-windows system creates artifacts for a given activity
+-originated as effort to improve user experience
+
+-----------------------------------------------------------------------------------------------
+
+Windows Registry
+-Windows Registry: collection of databases that contain the system config data
+-data about hardware, software or user info
+-data about recently used files, programs, devices connected
+-read data using regedit.exe (built-in windows utility to view and edit the registry)
+-consists of key and values
+-Five root keys
+1. HKEY_CURRENT_USER: root config info for user who is currently logged on 
+-user's folders, screen colors, control panel settings are stored here
+-associated with the user's profilie
+-abbreviated HKCU
+
+2. HKEY_HKEY_USERS: all actively loaded user profiles on the computer
+-HKEY_CURRENT_USER is a subkey of HKEY_USERS. 
+-abbreviated HKU
+
+3. HKEY_LOCAL_MACHINE: info particular to a computer for any user
+-abbreviated HKLM
+
+4. HKEY_CLASSES_ROOT: subkey of HKEY_LOCAL_MACHINE\software
+-info stored here makes sure that correct program opens using windows explorer
+-abbreviated HKCR 
+-merges the information from two sources: HKLM\Software\Classes & HKCU\Software\Classes
+-merged view for programs that are designed for earlier versions of windows
+
+5. HKEY_CURRENT_CONFIG: info about the hardware profile used by the local computer at system startup
+
+-run (Windows key + R) > regedit.exe
+
+-----------------------------------------------------------------------------------------------
+
+Accessing Registry Hives Offline
+-live system access - regedit.exe
+-disk image C:\Windows\System32\Config
+1. Default - HKEY_USERS\DEFAULT
+2. SAM - HKEY_LOCAL_MACHINE\SAM
+3. SECURITY - HKEY_LOCAL_MACHINE\Security
+4. SOFTWARE - HKEY_LOCAL_MACHINE\Software
+5. SYSTEM - HKEY_LOCAL_MACHINE\System
+
+user profile directory: C:\Users\<username>\
+1. NTUSER.DAT - HKEY_CURRENT_USER when user logs in
+2. USRCLASS.DAT - HKEY_CURRENT_USER\Software\CLASSES
+-USRCLASS.DAT is located C:\USERS\<username>\AppData\Local\Microsoft\Windows
+
+Amcache hive
+-AmCache - located in C:\Windows\AppCompat\Programs\AmCache.hve
+-windows creates this hive to save information on programs that were recently run on the system
+
+Transaction Logs and Backups
+-registry transaction logs and backups - vital sources of forensic data
+-transaction logs - changelog of the registry hive 
+-windows uses transaction logs when writing data to registry hives
+-stored in .LOG file extension
+-SAM hive transaction log - C:\Windows\System32\Config - SAM.LOG
+-multiple logs can be present .LOG1, .LOG2 etc
+
+-Registry backups located in C:\Windows\System32\Config
+-copied to C:\Windows\System32\Config\RegBack - every ten days
+
+What is the path for the five main registy hives: Defautl, SAM, Security, Software and System?
+-C:\Windows\System32\Config
+
+What is the path for AmCache hive?
+-C:\Windows\AppCompat\Programs\AmCache.hve
+
+--------------------------------------------------------------------------------------------
+
+Data Acquisition
+-image the system or make copy of the data and perform forensics on the copy
+-use tools
+1. KAPE:
+-live data acquisition and analysis tool
+-used to acquire registry data
+-Command-line also comes with GUI
+-extract the registry data 
+
+2. Autopsy:
+-option to acqurie data from both live systems or disk image
+-add data source > find location of files to extract > right-click and extract file
+
+3. FTK Imager
+-extract files from disk image or live system by mounting the disk image or drive in FTK imager
+-export files
+-live systems: can extract registry files from FTK Imager using 'Obtain Protected Files' option
+-will not copy AmCache.hve
+
+------------------------------------------------------------------------------------------------
+
+Exploring Windows Registry
+-After extraction we need a tool to view files 
+1. Registry Viewer:
+-AccessData's Registry Viewer: https://accessdata.com/product-download/registry-viewer-2-0-0
+-loads one hive at a time
+
+2. Zimmerman's Registry Explorer:
+-Registry Explorer
+-can load multiple hives simulataneously
+-Bookmarks option - go straight to the interesting registry keys and values
+
+3. RegRipper:
+-utility that takes a registry hive as input and outputs a report
+-shows results in sequential orger
+-CLI and GUI options
+-Doesn't take transactionlogs into account
+
+----------------------------------------------------------------------------------------------------------
+
+System information
+
+OS version:
+-SOFTWARE\Microsoft\Windows NT\CurrentVersion
+
+Current control set:
+-machine's configuration data used for controlling system startup
+-two control sets: ControlSet001 and ControlSet002
+-ControlSet001 - points control set the machine booted with - SYSTEM\ControlSet001
+-ControlSet002 - last known good configuration - SYSTEM\ControlSet002
+-Volatile Control set when machine is live - CurrentControlSet (HKLM\SYSTEM\CurrentControlSet)
+-SYSTEM\Select\Current
+
+Computer name:
+-SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName
+
+Time Zone info:
+-SYSTEM\CurrentControlSet\Control\TimeZoneInformation
+
+Network Interfaces and Past Networks
+-SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces
+-each interface is represented by a unique identifier (GUID)
+-past networks:
+SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkList\Signatures\Unmanaged
+SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkList\Signatures\managed
+
+Autostart Programs (Autoruns):
+-NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\Run
+-NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\RunOnce
+-SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce
+-SOFTWARE\Microsoft\Windows\CurrentVersion\policies\Explorer\Run
+-SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+-information about services: SYSTEM\CurrentControlSet\Services
+-Start key is set to 0x02 - service start at boot
+
+SAM hive and user information:
+-user account info, login info, group info
+-SAM\Domains\Account\Users
+
+-----------------------------------------------------------------------------------------
+
+Recent files
+NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs
+-windows maintains a list of recently opened files for each user
+
+-registry key with different keys with file extension
+-.pdf, .jpg, .docx
+
+Office recent Files
+-MS office maintains a list of recently opened docs 
+NTUSER.DAT\Software\Microsoft\Office\
+
+ShellBags:
+-USRCLASS.DAT\Local Settings\Software\Microsoft\Windows\Shell\Bags
+
+Open/Save and LastVisited Dialog MRUs:
+-dialog box where to save or open file from 
+-can find recently used files
+NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSavePIDlMRU
+NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\LastVisitedPidlMRU
+
+Windows Explorer adress/serch bars
+-way to identify a user's recent activity by looking at the paths typed in the windows explorer address bar
+NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\Explorer\TypedPaths
+NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\Explorer\WordWheelQuery
+
+
+EZtools 2021-12-01 13:00:34
+My Computer 2021-12-01 13:06:47
+Notepad My Computer \C:\Program Files\Amazon\Ec2ConfigService\Settings 2021-11-30 10:56:19
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+Evidence of exeution
+
+User Assist:
+-Windows keeps track of apps launched by the user using Windows Explorer
+-info about programs launched, number of times executed
+-mapped to each user's GUID
+-not programs run with command line 
+NTUSER.DAT\Software\Microsoft\Windows\Currentversion\Explorer\UserAssist\{GUID}\Count
+
+ShimCache:
+-keep track of app compatibility with the os
+-tracks all apps lunch on machine
+-ensure backward compatibility (AppCompatCache)
+SYSTEM\CurrentControlSet\Control\Session Manager\AppCompatCache
+-AppCompatCache Parser - Eric Zimmerman's tools - csv file for human-readable format
+
+AmCache:
+-artifact related to ShimCache
+-additional data related to program executions 
+-path, installation, execution, deletion times
+-SHA1 hashes 
+C:\Windows\appcompat\Programs\Amcache.hve
+-info about last executed programs
+Amcache.hve\Root\File\{Volume GUID}\
+
+BAM/DAM:
+-saves full path of executed programs
+-Background Activity Monitor (BAM): activity of background apps
+SYSTEM\CurrentControlSet\Services\bam\UserSettings\{SID}
+-Desktop Activity Monitor (DAM): power consumption optimization
+SYSTEM\CurrentControlSet\Services\dam\UserSettings\{SID}
+
+------------------------------------------------------------------------------------------------------------------------------------------
+
+External Devices/USB device forensics
+-identification of any USB or removable drives attached to the machine
+
+Device identification:
+-vendor id, product id, version of USB
+SYSTEM\CurrentControlSet\Enum\USBSTOR
+SYSTEM\CurrentControlSet\Enum\USB
+
+First/Last Times:
+-first time the device was connected
+-last time it was connected 
+SYSTEM\CurrentControlSet\Enum\USBSTOR\Ven_Prod_Version\USBSerial#\Properties\{83da6326-97a6-4088-9453-a19231573b29}\####
+0064 -	First Connection time
+0066 -	Last Connection time
+0067 -	Last removal time
+
+USB device volume name:
+-device name of the connected drive 
+SOFTWARE\Microsoft\Windows Portable Devices\Devices
+
+Serial #: 1C6F654E59A3B0C179D366AE&0
+name: Kingston DataTraveler 2.0 USB Device
+friendly name: USB
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+Hands-on challenge
+
+1. How many user created accounts are present on the system?
+Registry Explorer > load hive > Desktop\triage\C\Windows\System32\config\SAM > open
+-user created accounts >1000
+-3
+
+2. username of account that has never logged in?
+-Total login count: 0
+-thm-user2
+
+3. Password hint for THM-4n6
+-count
+
+4. Load hive
+triage\C\Users\THM-4n6\NTUSER.DAT
+NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs
+-2021-11-24 18:18:48
+
+5. Complete path from where the python 3.8.2 installer was run?
+NTUSER.DAT\Software\Microsoft\Windows\Currentversion\Explorer\UserAssist\{GUID}\Count
+python-3.8
+-Z:\setups\python-3.8.2.exe
+
+6. USB device with friendly name 'USB' last connected?
+SYSTEM\CurrentControlSet\Enum\USBSTOR
+-Ven_kingston last connected 2021-11-24 18:40:06
+
+
+
+
